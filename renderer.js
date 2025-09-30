@@ -27,64 +27,76 @@ marked.setOptions({
   }
 });
 
-// Load Monaco Editor
-const amdLoader = require('./node_modules/monaco-editor/min/vs/loader.js');
-const req = amdLoader.require;
-const MonacoEnvironment = amdLoader.MonacoEnvironment;
-
-MonacoEnvironment.getWorkerUrl = function (workerId, label) {
-  switch (label) {
-    case 'json':
-      return './node_modules/monaco-editor/min/vs/language/json/json.worker.js';
-    case 'css':
-    case 'scss':
-    case 'less':
-      return './node_modules/monaco-editor/min/vs/language/css/css.worker.js';
-    case 'html':
-    case 'handlebars':
-    case 'razor':
-      return './node_modules/monaco-editor/min/vs/language/html/html.worker.js';
-    case 'typescript':
-    case 'javascript':
-      return './node_modules/monaco-editor/min/vs/language/typescript/ts.worker.js';
-    default:
-      return './node_modules/monaco-editor/min/vs/editor/editor.worker.js';
-  }
-};
-
 let editor;
 let currentFilePath = null;
 let isDarkTheme = false;
 let isModified = false;
 
-req.config({
-  baseUrl: './node_modules/monaco-editor/min/vs'
-});
+// Wait for the DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', () => {
+  // Load Monaco Editor dynamically
+  const loaderScript = document.createElement('script');
+  loaderScript.src = './node_modules/monaco-editor/min/vs/loader.js';
+  loaderScript.onload = () => {
+    require.config({
+      paths: {
+        vs: './node_modules/monaco-editor/min/vs'
+      }
+    });
+    
+    // Set up Monaco Environment
+    window.MonacoEnvironment = {
+      getWorkerUrl: function (workerId, label) {
+        switch (label) {
+          case 'json':
+            return './node_modules/monaco-editor/min/vs/language/json/json.worker.js';
+          case 'css':
+          case 'scss':
+          case 'less':
+            return './node_modules/monaco-editor/min/vs/language/css/css.worker.js';
+          case 'html':
+          case 'handlebars':
+          case 'razor':
+            return './node_modules/monaco-editor/min/vs/language/html/html.worker.js';
+          case 'typescript':
+          case 'javascript':
+            return './node_modules/monaco-editor/min/vs/language/typescript/ts.worker.js';
+          default:
+            return './node_modules/monaco-editor/min/vs/editor/editor.worker.js';
+        }
+      }
+    };
+    
+    require(['vs/editor/editor.main'], function () {
+      // Create the editor
+      editor = monaco.editor.create(document.getElementById('editor'), {
+        value: '# Welcome to MD Reader\n\nStart by opening a Markdown file or typing here...',
+        language: 'markdown',
+        theme: 'vs',
+        automaticLayout: true,
+        minimap: {
+          enabled: true
+        },
+        fontSize: 14,
+        lineNumbers: 'on',
+        scrollBeyondLastLine: false,
+        wordWrap: 'on'
+      });
 
-req(['vs/editor/editor.main'], function () {
-  // Create the editor
-  editor = monaco.editor.create(document.getElementById('editor'), {
-    value: '# Welcome to MD Reader\n\nStart by opening a Markdown file or typing here...',
-    language: 'markdown',
-    theme: 'vs',
-    automaticLayout: true,
-    minimap: {
-      enabled: true
-    },
-    fontSize: 14,
-    lineNumbers: 'on',
-    scrollBeyondLastLine: false,
-    wordWrap: 'on'
-  });
+      // Initial preview render
+      updatePreview();
 
-  // Initial preview render
-  updatePreview();
-
-  // Listen for changes in the editor
-  editor.onDidChangeModelContent(() => {
-    isModified = true;
-    updatePreview();
-  });
+      // Listen for changes in the editor
+      editor.onDidChangeModelContent(() => {
+        isModified = true;
+        updatePreview();
+      });
+      
+      // Initialize buttons after editor is ready
+      initializeButtons();
+    });
+  };
+  document.head.appendChild(loaderScript);
 });
 
 // Update the preview pane
@@ -97,28 +109,31 @@ function updatePreview() {
   Prism.highlightAll();
 }
 
-// DOM Elements
-const openBtn = document.getElementById('open-btn');
-const saveBtn = document.getElementById('save-btn');
-const saveAsBtn = document.getElementById('save-as-btn');
-const themeToggle = document.getElementById('theme-toggle');
+// Initialize button event listeners
+function initializeButtons() {
+  // DOM Elements
+  const openBtn = document.getElementById('open-btn');
+  const saveBtn = document.getElementById('save-btn');
+  const saveAsBtn = document.getElementById('save-as-btn');
+  const themeToggle = document.getElementById('theme-toggle');
 
-// Event listeners
-openBtn.addEventListener('click', async () => {
-  openFile();
-});
+  // Event listeners
+  openBtn.addEventListener('click', async () => {
+    openFile();
+  });
 
-saveBtn.addEventListener('click', async () => {
-  saveFile();
-});
+  saveBtn.addEventListener('click', async () => {
+    saveFile();
+  });
 
-saveAsBtn.addEventListener('click', async () => {
-  saveFileAs();
-});
+  saveAsBtn.addEventListener('click', async () => {
+    saveFileAs();
+  });
 
-themeToggle.addEventListener('click', () => {
-  toggleTheme();
-});
+  themeToggle.addEventListener('click', () => {
+    toggleTheme();
+  });
+}
 
 // Menu event handlers
 ipcRenderer.on('open-file', () => {
