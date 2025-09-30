@@ -5,6 +5,27 @@ require('prismjs/components/prism-markdown.min.js');
 require('prismjs/components/prism-javascript.min.js');
 require('prismjs/components/prism-css.min.js');
 require('prismjs/components/prism-python.min.js');
+require('prismjs/components/prism-java.min.js');
+require('prismjs/components/prism-json.min.js');
+require('prismjs/components/prism-bash.min.js');
+
+// Configure marked to better match VS Code rendering
+marked.setOptions({
+  gfm: true,
+  breaks: false,
+  pedantic: false,
+  sanitize: false,
+  smartLists: true,
+  smartypants: false,
+  xhtml: true,
+  highlight: function(code, lang) {
+    if (Prism.languages[lang]) {
+      return Prism.highlight(code, Prism.languages[lang], lang);
+    } else {
+      return code;
+    }
+  }
+});
 
 // Load Monaco Editor
 const amdLoader = require('./node_modules/monaco-editor/min/vs/loader.js');
@@ -34,6 +55,7 @@ MonacoEnvironment.getWorkerUrl = function (workerId, label) {
 let editor;
 let currentFilePath = null;
 let isDarkTheme = false;
+let isModified = false;
 
 req.config({
   baseUrl: './node_modules/monaco-editor/min/vs'
@@ -48,7 +70,11 @@ req(['vs/editor/editor.main'], function () {
     automaticLayout: true,
     minimap: {
       enabled: true
-    }
+    },
+    fontSize: 14,
+    lineNumbers: 'on',
+    scrollBeyondLastLine: false,
+    wordWrap: 'on'
   });
 
   // Initial preview render
@@ -56,6 +82,7 @@ req(['vs/editor/editor.main'], function () {
 
   // Listen for changes in the editor
   editor.onDidChangeModelContent(() => {
+    isModified = true;
     updatePreview();
   });
 });
@@ -78,38 +105,101 @@ const themeToggle = document.getElementById('theme-toggle');
 
 // Event listeners
 openBtn.addEventListener('click', async () => {
+  openFile();
+});
+
+saveBtn.addEventListener('click', async () => {
+  saveFile();
+});
+
+saveAsBtn.addEventListener('click', async () => {
+  saveFileAs();
+});
+
+themeToggle.addEventListener('click', () => {
+  toggleTheme();
+});
+
+// Menu event handlers
+ipcRenderer.on('open-file', () => {
+  openFile();
+});
+
+ipcRenderer.on('save-file', () => {
+  saveFile();
+});
+
+ipcRenderer.on('save-file-as', () => {
+  saveFileAs();
+});
+
+ipcRenderer.on('toggle-theme', () => {
+  toggleTheme();
+});
+
+ipcRenderer.on('open-file-path', (event, filePath) => {
+  openFilePath(filePath);
+});
+
+async function openFile() {
+  // Check for unsaved changes
+  if (isModified && !confirm('You have unsaved changes. Continue without saving?')) {
+    return;
+  }
+  
   const result = await ipcRenderer.invoke('open-file-dialog');
   if (!result.canceled && !result.error) {
     editor.setValue(result.content);
     currentFilePath = result.filePath;
     document.title = `MD Reader - ${currentFilePath}`;
+    isModified = false;
   }
-});
+}
 
-saveBtn.addEventListener('click', async () => {
+async function openFilePath(filePath) {
+  // Check for unsaved changes
+  if (isModified && !confirm('You have unsaved changes. Continue without saving?')) {
+    return;
+  }
+  
+  const result = await ipcRenderer.invoke('read-file', filePath);
+  if (!result.error) {
+    editor.setValue(result.content);
+    currentFilePath = filePath;
+    document.title = `MD Reader - ${currentFilePath}`;
+    isModified = false;
+  } else {
+    alert('Failed to read file: ' + result.error);
+  }
+}
+
+async function saveFile() {
   if (currentFilePath) {
     const content = editor.getValue();
     const result = await ipcRenderer.invoke('save-file', currentFilePath, content);
     if (result.error) {
       alert('Failed to save file: ' + result.error);
+    } else {
+      isModified = false;
     }
   } else {
-    saveAsBtn.click();
+    saveFileAs();
   }
-});
+}
 
-saveAsBtn.addEventListener('click', async () => {
+async function saveFileAs() {
   const content = editor.getValue();
   const result = await ipcRenderer.invoke('save-file-as', content);
   if (!result.canceled && !result.error) {
     currentFilePath = result.filePath;
     document.title = `MD Reader - ${currentFilePath}`;
+    isModified = false;
   } else if (result.error) {
     alert('Failed to save file: ' + result.error);
   }
-});
+}
 
-themeToggle.addEventListener('click', () => {
+function toggleTheme() {
   isDarkTheme = !isDarkTheme;
   if (isDarkTheme) {
     // Apply dark theme
@@ -121,6 +211,27 @@ themeToggle.addEventListener('click', () => {
     editor.updateOptions({ theme: 'vs' });
   }
   updatePreview();
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', async (e) => {
+  // Ctrl+S for save
+  if (e.ctrlKey && e.key === 's') {
+    e.preventDefault();
+    saveFile();
+  }
+  
+  // Ctrl+O for open
+  if (e.ctrlKey && e.key === 'o') {
+    e.preventDefault();
+    openFile();
+  }
+  
+  // Ctrl+Shift+S for save as
+  if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+    e.preventDefault();
+    saveFileAs();
+  }
 });
 
 // Drag and drop functionality
@@ -130,18 +241,25 @@ document.addEventListener('dragover', (e) => {
 
 document.addEventListener('drop', async (e) => {
   e.preventDefault();
+  
+  // Check for unsaved changes
+  if (isModified && !confirm('You have unsaved changes. Continue without saving?')) {
+    return;
+  }
+  
   const files = e.dataTransfer.files;
   if (files.length > 0) {
     const filePath = files[0].path;
     if (filePath.endsWith('.md') || filePath.endsWith('.markdown')) {
-      const result = await ipcRenderer.invoke('read-file', filePath);
-      if (!result.error) {
-        editor.setValue(result.content);
-        currentFilePath = filePath;
-        document.title = `MD Reader - ${currentFilePath}`;
-      } else {
-        alert('Failed to read file: ' + result.error);
-      }
+      openFilePath(filePath);
     }
+  }
+});
+
+// Before unload warning
+window.addEventListener('beforeunload', (e) => {
+  if (isModified) {
+    e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+    return e.returnValue;
   }
 });

@@ -11,6 +11,8 @@ body {
   overflow: hidden;
   background-color: #ffffff;
   color: #333333;
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 body.dark-theme {
@@ -84,10 +86,11 @@ body.dark-theme .preview-container {
   background-color: #1e1e1e;
 }
 
-/* Preview styles */
+/* VS Code-like Preview styles */
 #preview {
   max-width: 100%;
   line-height: 1.6;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
 #preview h1,
@@ -96,15 +99,63 @@ body.dark-theme .preview-container {
 #preview h4,
 #preview h5,
 #preview h6 {
-  margin: 20px 0 10px;
+  margin: 24px 0 16px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+#preview h1 {
+  font-size: 2em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid #eaecef;
+}
+
+body.dark-theme #preview h1 {
+  border-bottom: 1px solid #444;
+}
+
+#preview h2 {
+  font-size: 1.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid #eaecef;
+}
+
+body.dark-theme #preview h2 {
+  border-bottom: 1px solid #444;
+}
+
+#preview h3 {
+  font-size: 1.25em;
+}
+
+#preview h4 {
+  font-size: 1em;
+}
+
+#preview h5 {
+  font-size: 0.875em;
+}
+
+#preview h6 {
+  font-size: 0.85em;
+  color: #6a737d;
+}
+
+body.dark-theme #preview h6 {
+  color: #9e9e9e;
 }
 
 #preview p {
-  margin: 10px 0;
+  margin: 16px 0;
 }
 
 #preview a {
   color: #007acc;
+  text-decoration: none;
+}
+
+#preview a:hover {
+  text-decoration: underline;
 }
 
 body.dark-theme #preview a {
@@ -113,10 +164,10 @@ body.dark-theme #preview a {
 
 #preview code {
   background-color: rgba(0, 0, 0, 0.05);
-  padding: 2px 4px;
+  padding: 0.2em 0.4em;
   border-radius: 3px;
-  font-family: 'Courier New', monospace;
-  font-size: 0.9em;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.85em;
 }
 
 body.dark-theme #preview code {
@@ -129,6 +180,9 @@ body.dark-theme #preview code {
   border-radius: 6px;
   overflow-x: auto;
   margin: 16px 0;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.85em;
+  line-height: 1.45;
 }
 
 body.dark-theme #preview pre {
@@ -137,7 +191,7 @@ body.dark-theme #preview pre {
 
 #preview blockquote {
   border-left: 4px solid #007acc;
-  padding-left: 16px;
+  padding: 0 1em;
   margin: 16px 0;
   color: #6a737d;
 }
@@ -149,7 +203,7 @@ body.dark-theme #preview blockquote {
 
 #preview ul,
 #preview ol {
-  padding-left: 30px;
+  padding-left: 2em;
   margin: 16px 0;
 }
 
@@ -157,16 +211,30 @@ body.dark-theme #preview blockquote {
   margin: 8px 0;
 }
 
+#preview li > p {
+  margin: 16px 0;
+}
+
+#preview ul ul,
+#preview ul ol,
+#preview ol ol,
+#preview ol ul {
+  margin: 8px 0;
+}
+
 #preview table {
   border-collapse: collapse;
   width: 100%;
   margin: 16px 0;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
 }
 
 #preview th,
 #preview td {
   border: 1px solid #ddd;
-  padding: 8px 12px;
+  padding: 6px 13px;
   text-align: left;
 }
 
@@ -184,7 +252,20 @@ body.dark-theme #preview th {
   background-color: #2d2d2d;
 }
 
-/* Prism.js theme overrides */
+#preview tr:nth-child(2n) {
+  background-color: #f6f8fa;
+}
+
+body.dark-theme #preview tr:nth-child(2n) {
+  background-color: #2d2d2d;
+}
+
+#preview img {
+  max-width: 100%;
+  box-sizing: content-box;
+}
+
+/* Prism.js theme overrides to match VS Code */
 body.dark-theme .token.comment,
 body.dark-theme .token.prolog,
 body.dark-theme .token.doctype,

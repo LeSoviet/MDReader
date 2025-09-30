@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
@@ -8,9 +8,11 @@ if (require('electron-squirrel-startup')) {
   return;
 }
 
+let mainWindow;
+
 const createWindow = () => {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
@@ -18,6 +20,7 @@ const createWindow = () => {
       contextIsolation: false,
       enableRemoteModule: true,
     },
+    icon: path.join(__dirname, 'assets', 'icon.png') // Add icon support
   });
 
   // and load the index.html of the app.
@@ -25,7 +28,84 @@ const createWindow = () => {
 
   // Open the DevTools for debugging
   // mainWindow.webContents.openDevTools();
+  
+  // Create the application menu
+  createMenu();
 };
+
+// Create the application menu
+function createMenu() {
+  const template = [
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'Open',
+          accelerator: 'CmdOrCtrl+O',
+          click() {
+            mainWindow.webContents.send('open-file');
+          }
+        },
+        {
+          label: 'Save',
+          accelerator: 'CmdOrCtrl+S',
+          click() {
+            mainWindow.webContents.send('save-file');
+          }
+        },
+        {
+          label: 'Save As',
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click() {
+            mainWindow.webContents.send('save-file-as');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Exit',
+          click() {
+            app.quit();
+          }
+        }
+      ]
+    },
+    {
+      label: 'View',
+      submenu: [
+        {
+          label: 'Toggle Theme',
+          click() {
+            mainWindow.webContents.send('toggle-theme');
+          }
+        },
+        { type: 'separator' },
+        { role: 'reload' },
+        { role: 'forcereload' },
+        { role: 'toggledevtools' },
+        { type: 'separator' },
+        { role: 'resetzoom' },
+        { role: 'zoomin' },
+        { role: 'zoomout' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' }
+      ]
+    },
+    {
+      label: 'Help',
+      submenu: [
+        {
+          label: 'Learn More',
+          click() {
+            require('electron').shell.openExternal('https://github.com');
+          }
+        }
+      ]
+    }
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -46,6 +126,14 @@ app.on('activate', () => {
   // dock icon is clicked and there are no other windows open.
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
+  }
+});
+
+// Handle file opening from command line arguments or file associations
+app.on('open-file', (event, filePath) => {
+  event.preventDefault();
+  if (mainWindow) {
+    mainWindow.webContents.send('open-file-path', filePath);
   }
 });
 
