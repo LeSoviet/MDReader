@@ -9,6 +9,7 @@
 # Production
 /build
 /dist
+/release
 
 # Misc
 .DS_Store
@@ -38,3 +39,25 @@ Thumbs.db
 
 # Optional npm cache directory
 .npm
+
+# Electron build artifacts
+*.exe
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+*.snap
+*.tar.gz
+*.zip
+
+# Windows files
+*.exe
+*.msi
+
+# macOS files
+*.dmg
+
+# Linux files
+*.AppImage
+*.deb
+*.rpm
