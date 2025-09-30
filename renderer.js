@@ -1,6 +1,9 @@
 const { ipcRenderer } = require('electron');
 const marked = require('marked');
 const Prism = require('prismjs');
+const path = require('path');
+const fs = require('fs');
+const { pathToFileURL } = require('url');
 require('prismjs/components/prism-markdown.min.js');
 require('prismjs/components/prism-javascript.min.js');
 require('prismjs/components/prism-css.min.js');
@@ -38,6 +41,32 @@ let isDarkTheme = false;
 let isModified = false;
 let currentFileName = 'Untitled';
 let isResizing = false;
+let viewMode = 'split'; // 'split', 'editor', 'preview'
+
+function resolveMonacoResourceRoot() {
+  const candidates = [];
+
+  if (process && process.resourcesPath) {
+    candidates.push(path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'monaco-editor', 'min'));
+  }
+
+  candidates.push(path.join(__dirname, 'node_modules', 'monaco-editor', 'min'));
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return {
+        fsPath: candidate,
+        fileUrl: pathToFileURL(candidate).href
+      };
+    }
+  }
+
+  const fallback = candidates[candidates.length - 1];
+  return {
+    fsPath: fallback,
+    fileUrl: pathToFileURL(fallback).href
+  };
+}
 
 // Add global error handlers for debugging
 window.addEventListener('error', function(e) {
@@ -50,7 +79,6 @@ window.addEventListener('unhandledrejection', function(e) {
 
 // Wait for the DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('DOM content loaded');
   
   // Initialize window controls
   initializeWindowControls();
@@ -161,10 +189,18 @@ function createNewTab(filePath = null, content = null) {
     
     // Add event listeners
     tabElement.addEventListener('click', (e) => {
-      if (e.target.classList.contains('tab-close')) {
+      if (e.target.classList.contains('tab-close') || e.target.closest('.tab-close')) {
         closeTab(tabId);
       } else {
         switchToTab(tabId);
+      }
+    });
+    
+    // Middle mouse button to close tab
+    tabElement.addEventListener('mousedown', (e) => {
+      if (e.button === 1) {
+        e.preventDefault();
+        closeTab(tabId);
       }
     });
     
@@ -289,56 +325,56 @@ function updateActiveTabContent() {
 // Load Monaco editor with better error handling
 function loadMonacoEditor() {
   try {
-    console.log('Loading Monaco editor');
     
     // Set up Monaco Environment before loading the editor
+    const { fsPath: monacoBasePath } = resolveMonacoResourceRoot();
+    const monacoVsPath = path.join(monacoBasePath, 'vs');
+    const monacoVsUrl = pathToFileURL(monacoVsPath).href;
+
     window.MonacoEnvironment = {
       getWorkerUrl: function (workerId, label) {
-        // Use a more robust path resolution
-        const path = './node_modules/monaco-editor/min/vs/';
-        switch (label) {
-          case 'json':
-            return path + 'language/json/json.worker.js';
-          case 'css':
-          case 'scss':
-          case 'less':
-            return path + 'language/css/css.worker.js';
-          case 'html':
-          case 'handlebars':
-          case 'razor':
-            return path + 'language/html/html.worker.js';
-          case 'typescript':
-          case 'javascript':
-            return path + 'language/typescript/ts.worker.js';
-          default:
-            return path + 'editor/editor.worker.js';
-        }
+        const workerMap = {
+          json: 'language/json/json.worker.js',
+          css: 'language/css/css.worker.js',
+          scss: 'language/css/css.worker.js',
+          less: 'language/css/css.worker.js',
+          html: 'language/html/html.worker.js',
+          handlebars: 'language/html/html.worker.js',
+          razor: 'language/html/html.worker.js',
+          typescript: 'language/typescript/ts.worker.js',
+          javascript: 'language/typescript/ts.worker.js'
+        };
+
+        const workerRelativePath = workerMap[label] || 'editor/editor.worker.js';
+        return `${monacoVsUrl}/${workerRelativePath}`;
       }
     };
     
     // Check if Monaco is already available (in case of hot reload)
     if (typeof monaco !== 'undefined' && monaco.editor) {
-      console.log('Monaco already available');
       initializeEditor();
       return;
     }
     
     // Dynamically load the AMD loader
     const loaderScript = document.createElement('script');
-    loaderScript.src = './node_modules/monaco-editor/min/vs/loader.js';
+    loaderScript.src = pathToFileURL(path.join(monacoVsPath, 'loader.js')).href;
     loaderScript.onload = function() {
-      console.log('Monaco loader script loaded');
       try {
         // Configure require with explicit paths
-        require.config({
+        const amdRequire = globalThis.require || window.require;
+        if (!amdRequire || typeof amdRequire.config !== 'function') {
+          throw new Error('AMD loader did not expose require.config');
+        }
+
+        amdRequire.config({
           paths: {
-            'vs': './node_modules/monaco-editor/min/vs'
+            'vs': monacoVsUrl
           }
         });
         
         // Load the editor
-        require(['vs/editor/editor.main'], function() {
-          console.log('Monaco editor main loaded');
+        amdRequire(['vs/editor/editor.main'], function() {
           initializeEditor();
         }, function(error) {
           console.error('Error loading Monaco editor modules:', error);
@@ -365,7 +401,6 @@ function loadMonacoEditor() {
 // Initialize the Monaco editor
 function initializeEditor() {
   try {
-    console.log('Initializing Monaco editor');
     const editorContainer = document.getElementById('editor');
     if (editorContainer) {
       // Clear any previous content
@@ -401,8 +436,6 @@ function initializeEditor() {
       editor.onDidChangeCursorPosition(() => {
         updateStatusBar();
       });
-      
-      console.log('Monaco editor initialized successfully');
     } else {
       console.error('Editor container not found');
       showEditorError('Editor container not found.');
@@ -424,13 +457,13 @@ function showEditorError(message) {
 // Initialize UI elements that don't depend on Monaco editor
 function initializeUIElements() {
   try {
-    console.log('Initializing UI elements');
     
     // DOM Elements
     const openBtn = document.getElementById('open-btn');
     const saveBtn = document.getElementById('save-btn');
     const saveAsBtn = document.getElementById('save-as-btn');
     const themeToggle = document.getElementById('theme-toggle');
+    const viewModeToggle = document.getElementById('view-mode-toggle');
     const resizer = document.getElementById('resizer');
     const container = document.querySelector('.container');
     const editorPanel = document.querySelector('.editor-panel');
@@ -439,7 +472,6 @@ function initializeUIElements() {
     // Event listeners with existence checks
     if (openBtn) {
       openBtn.addEventListener('click', async () => {
-        console.log('Open button clicked');
         openFile();
       });
     } else {
@@ -448,7 +480,6 @@ function initializeUIElements() {
 
     if (saveBtn) {
       saveBtn.addEventListener('click', async () => {
-        console.log('Save button clicked');
         saveFile();
       });
     } else {
@@ -457,7 +488,6 @@ function initializeUIElements() {
 
     if (saveAsBtn) {
       saveAsBtn.addEventListener('click', async () => {
-        console.log('Save As button clicked');
         saveFileAs();
       });
     } else {
@@ -466,17 +496,23 @@ function initializeUIElements() {
 
     if (themeToggle) {
       themeToggle.addEventListener('click', () => {
-        console.log('Theme toggle clicked');
         toggleTheme();
       });
     } else {
       console.warn('Theme toggle button not found');
     }
     
+    if (viewModeToggle) {
+      viewModeToggle.addEventListener('click', () => {
+        toggleViewMode();
+      });
+    } else {
+      console.warn('View mode toggle button not found');
+    }
+    
     // Resizer functionality
     if (resizer && container && editorPanel && previewPanel) {
       resizer.addEventListener('mousedown', (e) => {
-        console.log('Resizer mousedown');
         isResizing = true;
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
@@ -500,7 +536,6 @@ function initializeUIElements() {
       });
       
       document.addEventListener('mouseup', () => {
-        console.log('Mouse up');
         isResizing = false;
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
@@ -511,7 +546,6 @@ function initializeUIElements() {
     
     // Initialize status bar
     updateStatusBar();
-    console.log('UI elements initialized');
   } catch (error) {
     console.error('Error initializing UI elements:', error);
   }
@@ -549,27 +583,22 @@ function updatePreview() {
 // Menu event handlers
 try {
   ipcRenderer.on('open-file', () => {
-    console.log('Open file IPC event received');
     openFile();
   });
 
   ipcRenderer.on('save-file', () => {
-    console.log('Save file IPC event received');
     saveFile();
   });
 
   ipcRenderer.on('save-file-as', () => {
-    console.log('Save file as IPC event received');
     saveFileAs();
   });
 
   ipcRenderer.on('toggle-theme', () => {
-    console.log('Toggle theme IPC event received');
     toggleTheme();
   });
 
   ipcRenderer.on('open-file-path', (event, filePath) => {
-    console.log('Open file path IPC event received:', filePath);
     openFilePath(filePath);
   });
 } catch (error) {
@@ -578,7 +607,6 @@ try {
 
 async function openFile() {
   try {
-    console.log('Opening file');
     // Check for unsaved changes in active tab
     if (isModified && !confirm('You have unsaved changes. Continue without saving?')) {
       return;
@@ -621,25 +649,19 @@ async function openFile() {
 
 async function openFilePath(filePath) {
   try {
-    console.log('Opening file by path:', filePath);
+    const normalizedPath = filePath.replace(/\\/g, '\\');
     
-    // Check if file is already open in a tab
-    const existingTab = tabs.find(tab => tab.filePath === filePath);
+    const existingTab = tabs.find(tab => tab.filePath && tab.filePath.replace(/\\/g, '\\') === normalizedPath);
     if (existingTab) {
       switchToTab(existingTab.id);
       return;
     }
     
-    // Check for unsaved changes in active tab
-    if (isModified && !confirm('You have unsaved changes. Continue without saving?')) {
-      return;
-    }
-    
-    const result = await ipcRenderer.invoke('read-file', filePath);
+    const result = await ipcRenderer.invoke('read-file', normalizedPath);
     if (!result.error) {
-      // Create new tab with file content
-      createNewTab(filePath, result.content);
+      createNewTab(normalizedPath, result.content);
     } else {
+      console.error('Error reading file:', result.error);
       alert('Failed to read file: ' + result.error);
     }
   } catch (error) {
@@ -650,7 +672,6 @@ async function openFilePath(filePath) {
 
 async function saveFile() {
   try {
-    console.log('Saving file');
     if (currentFilePath) {
       if (!editor) {
         alert('Editor not initialized.');
@@ -686,7 +707,6 @@ async function saveFile() {
 
 async function saveFileAs() {
   try {
-    console.log('Saving file as');
     if (!editor) {
       alert('Editor not initialized.');
       return;
@@ -728,7 +748,6 @@ async function saveFileAs() {
 
 function toggleTheme() {
   try {
-    console.log('Toggling theme');
     isDarkTheme = !isDarkTheme;
     const themeIcon = document.getElementById('theme-icon');
     
@@ -793,10 +812,64 @@ function updateStatusBar() {
       }
       const themeText = isDarkTheme ? 'Dark' : 'Light';
       const modifiedText = isModified ? 'Modified' : 'Saved';
-      statusBar.textContent = `${currentFileName} - Line ${line}, Column ${column} - ${themeText} - ${modifiedText}`;
+      const viewModeText = viewMode === 'split' ? 'Split' : viewMode === 'editor' ? 'Editor Only' : 'Preview Only';
+      statusBar.textContent = `${currentFileName} - Line ${line}, Column ${column} - ${themeText} - ${modifiedText} - ${viewModeText}`;
     }
   } catch (error) {
     console.error('Error updating status bar:', error);
+  }
+}
+
+function toggleViewMode() {
+  try {
+    const editorPanel = document.getElementById('editor-panel');
+    const previewPanel = document.getElementById('preview-panel');
+    const resizer = document.getElementById('resizer');
+    const viewModeIcon = document.getElementById('view-mode-icon');
+    const viewModeText = document.getElementById('view-mode-text');
+    
+    if (!editorPanel || !previewPanel || !resizer) {
+      console.error('View mode elements not found');
+      return;
+    }
+    
+    // Cycle through modes: split -> editor -> preview -> split
+    if (viewMode === 'split') {
+      viewMode = 'editor';
+      editorPanel.style.width = '100%';
+      previewPanel.style.display = 'none';
+      resizer.style.display = 'none';
+      if (viewModeIcon) viewModeIcon.className = 'fas fa-code';
+      if (viewModeText) viewModeText.textContent = 'Editor';
+    } else if (viewMode === 'editor') {
+      viewMode = 'preview';
+      editorPanel.style.display = 'none';
+      previewPanel.style.width = '100%';
+      previewPanel.style.display = 'block';
+      resizer.style.display = 'none';
+      if (viewModeIcon) viewModeIcon.className = 'fas fa-eye';
+      if (viewModeText) viewModeText.textContent = 'Preview';
+    } else {
+      viewMode = 'split';
+      editorPanel.style.display = 'block';
+      editorPanel.style.width = '50%';
+      previewPanel.style.display = 'block';
+      previewPanel.style.width = '50%';
+      resizer.style.display = 'block';
+      if (viewModeIcon) viewModeIcon.className = 'fas fa-columns';
+      if (viewModeText) viewModeText.textContent = 'Split';
+    }
+    
+    // Trigger editor layout update
+    if (editor && viewMode !== 'preview') {
+      setTimeout(() => {
+        editor.layout();
+      }, 100);
+    }
+    
+    updateStatusBar();
+  } catch (error) {
+    console.error('Error toggling view mode:', error);
   }
 }
 
@@ -805,35 +878,30 @@ document.addEventListener('keydown', async (e) => {
   try {
     // Ctrl+S for save
     if (e.ctrlKey && e.key === 's') {
-      console.log('Ctrl+S pressed');
       e.preventDefault();
       saveFile();
     }
     
     // Ctrl+O for open
     if (e.ctrlKey && e.key === 'o') {
-      console.log('Ctrl+O pressed');
       e.preventDefault();
       openFile();
     }
     
     // Ctrl+Shift+S for save as
     if (e.ctrlKey && e.shiftKey && e.key === 'S') {
-      console.log('Ctrl+Shift+S pressed');
       e.preventDefault();
       saveFileAs();
     }
     
     // Ctrl+T for new tab
     if (e.ctrlKey && e.key === 't') {
-      console.log('Ctrl+T pressed');
       e.preventDefault();
       createNewTab();
     }
     
     // Ctrl+W for close tab
     if (e.ctrlKey && e.key === 'w') {
-      console.log('Ctrl+W pressed');
       e.preventDefault();
       if (activeTabId) {
         closeTab(activeTabId);
@@ -845,48 +913,48 @@ document.addEventListener('keydown', async (e) => {
 });
 
 // Drag and drop functionality
+let dragCounter = 0;
+
 document.addEventListener('dragover', (e) => {
-  console.log('Drag over event');
   e.preventDefault();
-  e.stopPropagation(); // Add this to ensure proper handling
+  e.stopPropagation();
 });
 
 document.addEventListener('drop', async (e) => {
   try {
-    console.log('Drop event');
     e.preventDefault();
-    e.stopPropagation(); // Add this to ensure proper handling
+    e.stopPropagation();
+    dragCounter = 0;
+    document.body.style.opacity = '1';
     
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-      const filePath = files[0].path;
-      console.log('Dropped file path:', filePath);
-      if (filePath.endsWith('.md') || filePath.endsWith('.markdown')) {
-        openFilePath(filePath);
-      } else {
-        console.log('Dropped file is not a Markdown file');
+      for (let i = 0; i < files.length; i++) {
+        const filePath = files[i].path;
+        if (filePath.endsWith('.md') || filePath.endsWith('.markdown')) {
+          await openFilePath(filePath);
+        }
       }
-    } else {
-      console.log('No files in drop event');
     }
   } catch (error) {
     console.error('Error handling drop:', error);
   }
 });
 
-// Add drag enter and drag leave events for visual feedback
 document.addEventListener('dragenter', (e) => {
-  console.log('Drag enter event');
   e.preventDefault();
   e.stopPropagation();
+  dragCounter++;
   document.body.style.opacity = '0.8';
 });
 
 document.addEventListener('dragleave', (e) => {
-  console.log('Drag leave event');
   e.preventDefault();
   e.stopPropagation();
-  document.body.style.opacity = '1';
+  dragCounter--;
+  if (dragCounter === 0) {
+    document.body.style.opacity = '1';
+  }
 });
 
 // Before unload warning

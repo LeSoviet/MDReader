@@ -4,23 +4,39 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-packager . MDReader --platform=win32 --arch=x64 --out=dist --overwrite --asar --app-version=1.0.0",
+    "build": "electron-packager . MDReader --platform=win32 --arch=x64 --out=dist --overwrite --asar --asar.unpackDir=node_modules/monaco-editor --app-version=1.0.0",
     "build-installer": "node build-windows-installer.js"
   },
   "build": {
     "appId": "com.example.mdreader",
     "productName": "MD Reader",
+    "asarUnpack": [
+      "node_modules/monaco-editor/**"
+    ],
     "win": {
-      "target": "nsis"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
     },
     "nsis": {
-      "oneClick": true,
-      "perMachine": false
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "MD Reader"
     },
     "fileAssociations": [
       {
         "ext": "md",
-        "name": "Markdown Document"
+        "name": "Markdown Document",
+        "description": "Markdown Document",
+        "role": "Editor"
       }
     ]
   },

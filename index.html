@@ -47,6 +47,10 @@
             <i class="fas fa-moon" id="theme-icon"></i>
             <span>Theme</span>
         </button>
+        <button id="view-mode-toggle" title="Toggle View Mode">
+            <i class="fas fa-columns" id="view-mode-icon"></i>
+            <span id="view-mode-text">Split</span>
+        </button>
     </div>
     
     <!-- Tabs container -->
@@ -59,12 +63,12 @@
         </div>
     </div>
     
-    <div class="container">
-        <div class="panel editor-panel">
+    <div class="container" id="main-container">
+        <div class="panel editor-panel" id="editor-panel">
             <div id="editor"></div>
         </div>
         <div class="resizer" id="resizer"></div>
-        <div class="panel preview-panel">
+        <div class="panel preview-panel" id="preview-panel">
             <div id="preview"></div>
         </div>
     </div>
