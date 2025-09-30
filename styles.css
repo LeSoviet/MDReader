@@ -13,11 +13,89 @@ body {
   color: #333333;
   font-size: 16px;
   line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  -webkit-app-region: no-drag; /* Make sure the body is not draggable by default */
 }
 
 body.dark-theme {
   background-color: #1e1e1e;
   color: #d4d4d4;
+}
+
+/* Custom title bar */
+.title-bar {
+  height: 30px;
+  background-color: #f3f3f3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  border-bottom: 1px solid #ddd;
+  -webkit-app-region: drag; /* Make the title bar draggable */
+}
+
+body.dark-theme .title-bar {
+  background-color: #2d2d2d;
+  border-bottom: 1px solid #3c3c3c;
+}
+
+.title-bar-drag-region {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 120px; /* Leave space for window controls */
+  height: 30px;
+  -webkit-app-region: drag;
+}
+
+.title-bar-text {
+  font-size: 12px;
+  color: #333;
+  flex: 1;
+  text-align: center;
+  pointer-events: none; /* Prevent text from interfering with drag */
+}
+
+body.dark-theme .title-bar-text {
+  color: #d4d4d4;
+}
+
+.title-bar-controls {
+  display: flex;
+  height: 100%;
+  -webkit-app-region: no-drag; /* Make controls non-draggable */
+}
+
+.title-bar-button {
+  width: 40px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: #333;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: background-color 0.2s;
+}
+
+body.dark-theme .title-bar-button {
+  color: #d4d4d4;
+}
+
+.title-bar-button:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+body.dark-theme .title-bar-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.title-bar-button.close-btn:hover {
+  background-color: #e81123;
+  color: white;
 }
 
 .toolbar {
@@ -27,6 +105,7 @@ body.dark-theme {
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-shrink: 0; /* Prevent toolbar from shrinking */
 }
 
 body.dark-theme .toolbar {
@@ -45,6 +124,7 @@ body.dark-theme .toolbar {
   display: flex;
   align-items: center;
   gap: 8px;
+  -webkit-app-region: no-drag; /* Make buttons non-draggable */
 }
 
 .toolbar button:hover {
@@ -64,10 +144,138 @@ body.dark-theme .toolbar button:hover {
   color: #ffffff;
 }
 
+/* Tabs container */
+.tabs-container {
+  display: flex;
+  background-color: #f3f3f3;
+  border-bottom: 1px solid #ddd;
+  flex-shrink: 0;
+}
+
+body.dark-theme .tabs-container {
+  background-color: #2d2d2d;
+  border-bottom: 1px solid #3c3c3c;
+}
+
+.tabs-list {
+  display: flex;
+  flex: 1;
+  overflow-x: auto;
+  padding: 0 5px;
+}
+
+.tabs-list::-webkit-scrollbar {
+  height: 15px;
+}
+
+.tabs-list::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+body.dark-theme .tabs-list::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.tab {
+  padding: 8px 15px;
+  background-color: #e9e9e9;
+  border: 1px solid #ddd;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  position: relative;
+  min-width: 120px;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.dark-theme .tab {
+  background-color: #3c3c3c;
+  border: 1px solid #3c3c3c;
+  color: #d4d4d4;
+}
+
+.tab.active {
+  background-color: #ffffff;
+  border-bottom: 1px solid #ffffff;
+  z-index: 1;
+}
+
+body.dark-theme .tab.active {
+  background-color: #1e1e1e;
+  border-bottom: 1px solid #1e1e1e;
+}
+
+.tab:hover:not(.active) {
+  background-color: #e0e0e0;
+}
+
+body.dark-theme .tab:hover:not(.active) {
+  background-color: #454545;
+}
+
+.tab-close {
+  margin-left: auto;
+  padding: 2px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+
+.tab-close:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+body.dark-theme .tab-close:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.tabs-controls {
+  display: flex;
+  align-items: center;
+  padding: 0 5px;
+}
+
+.tab-control-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: #333;
+  cursor: pointer;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.dark-theme .tab-control-btn {
+  color: #d4d4d4;
+}
+
+.tab-control-btn:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+body.dark-theme .tab-control-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
 .container {
   display: flex;
-  height: calc(100vh - 80px); /* Adjusted for toolbar and status bar */
+  flex: 1; /* Take up remaining space */
   width: 100%;
+  min-height: 0; /* Allow container to shrink */
 }
 
 .panel {
@@ -90,6 +298,7 @@ body.dark-theme .toolbar button:hover {
   cursor: col-resize;
   position: relative;
   z-index: 10;
+  -webkit-app-region: no-drag; /* Make resizer non-draggable */
 }
 
 body.dark-theme .resizer {
@@ -306,6 +515,8 @@ body.dark-theme #preview tr:nth-child(2n) {
   align-items: center;
   justify-content: flex-end;
   border-top: 1px solid #005a9e;
+  flex-shrink: 0; /* Prevent status bar from shrinking */
+  -webkit-app-region: no-drag; /* Make status bar non-draggable */
 }
 
 body.dark-theme .status-bar {

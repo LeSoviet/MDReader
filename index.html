@@ -10,6 +10,22 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+    <div class="title-bar" id="title-bar">
+        <div class="title-bar-drag-region" id="title-bar-drag-region"></div>
+        <div class="title-bar-text">MD Reader</div>
+        <div class="title-bar-controls">
+            <button id="minimize-btn" class="title-bar-button minimize-btn" title="Minimize">
+                <i class="fas fa-minus"></i>
+            </button>
+            <button id="maximize-btn" class="title-bar-button maximize-btn" title="Maximize">
+                <i class="fas fa-square"></i>
+            </button>
+            <button id="close-btn" class="title-bar-button close-btn" title="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+    
     <div class="toolbar">
         <button id="open-btn" title="Open File (Ctrl+O)">
             <i class="fas fa-folder-open"></i>
@@ -23,10 +39,24 @@
             <i class="fas fa-file-export"></i>
             <span>Save As</span>
         </button>
+        <button id="new-tab-btn" title="New Tab (Ctrl+T)">
+            <i class="fas fa-plus"></i>
+            <span>New Tab</span>
+        </button>
         <button id="theme-toggle" title="Toggle Theme">
             <i class="fas fa-moon" id="theme-icon"></i>
             <span>Theme</span>
         </button>
+    </div>
+    
+    <!-- Tabs container -->
+    <div class="tabs-container" id="tabs-container">
+        <div class="tabs-list" id="tabs-list"></div>
+        <div class="tabs-controls">
+            <button id="new-tab-btn-small" class="tab-control-btn" title="New Tab">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
     </div>
     
     <div class="container">

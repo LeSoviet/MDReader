@@ -27,6 +27,11 @@ marked.setOptions({
   }
 });
 
+// Tab management
+let tabs = [];
+let activeTabId = null;
+let tabCounter = 0;
+
 let editor;
 let currentFilePath = null;
 let isDarkTheme = false;
@@ -47,12 +52,239 @@ window.addEventListener('unhandledrejection', function(e) {
 document.addEventListener('DOMContentLoaded', () => {
   console.log('DOM content loaded');
   
+  // Initialize window controls
+  initializeWindowControls();
+  
+  // Initialize tab system
+  initializeTabSystem();
+  
   // Initialize UI elements even if Monaco fails
   initializeUIElements();
   
   // Try to load Monaco editor
   loadMonacoEditor();
 });
+
+// Initialize custom window controls
+function initializeWindowControls() {
+  try {
+    const minimizeBtn = document.getElementById('minimize-btn');
+    const maximizeBtn = document.getElementById('maximize-btn');
+    const closeBtn = document.getElementById('close-btn');
+    
+    if (minimizeBtn) {
+      minimizeBtn.addEventListener('click', () => {
+        ipcRenderer.invoke('minimize-window');
+      });
+    }
+    
+    if (maximizeBtn) {
+      maximizeBtn.addEventListener('click', () => {
+        ipcRenderer.invoke('maximize-window');
+      });
+    }
+    
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        ipcRenderer.invoke('close-window');
+      });
+    }
+  } catch (error) {
+    console.error('Error initializing window controls:', error);
+  }
+}
+
+// Initialize tab system
+function initializeTabSystem() {
+  try {
+    // Create initial tab
+    createNewTab();
+    
+    // Add event listeners for tab controls
+    const newTabBtn = document.getElementById('new-tab-btn');
+    const newTabBtnSmall = document.getElementById('new-tab-btn-small');
+    
+    if (newTabBtn) {
+      newTabBtn.addEventListener('click', () => {
+        createNewTab();
+      });
+    }
+    
+    if (newTabBtnSmall) {
+      newTabBtnSmall.addEventListener('click', () => {
+        createNewTab();
+      });
+    }
+  } catch (error) {
+    console.error('Error initializing tab system:', error);
+  }
+}
+
+// Create a new tab
+function createNewTab(filePath = null, content = null) {
+  try {
+    const tabId = `tab-${tabCounter++}`;
+    const fileName = filePath ? filePath.split('\\').pop() : 'Untitled';
+    
+    // Create tab data
+    const tabData = {
+      id: tabId,
+      filePath: filePath,
+      fileName: fileName,
+      content: content || '# Welcome to MD Reader\n\nStart by opening a Markdown file or typing here...',
+      isModified: false,
+      editorInstance: null
+    };
+    
+    // Add to tabs array
+    tabs.push(tabData);
+    
+    // Create tab element
+    const tabElement = document.createElement('div');
+    tabElement.className = 'tab';
+    tabElement.id = `tab-${tabId}`;
+    tabElement.dataset.tabId = tabId;
+    
+    // Tab content
+    tabElement.innerHTML = `
+      <span class="tab-title">${fileName}</span>
+      <span class="tab-close" data-tab-id="${tabId}">
+        <i class="fas fa-times"></i>
+      </span>
+    `;
+    
+    // Add to tabs list
+    const tabsList = document.getElementById('tabs-list');
+    if (tabsList) {
+      tabsList.appendChild(tabElement);
+    }
+    
+    // Add event listeners
+    tabElement.addEventListener('click', (e) => {
+      if (e.target.classList.contains('tab-close')) {
+        closeTab(tabId);
+      } else {
+        switchToTab(tabId);
+      }
+    });
+    
+    // Switch to the new tab
+    switchToTab(tabId);
+    
+    return tabId;
+  } catch (error) {
+    console.error('Error creating new tab:', error);
+  }
+}
+
+// Switch to a tab
+function switchToTab(tabId) {
+  try {
+    // Update active tab
+    activeTabId = tabId;
+    
+    // Update tab UI
+    document.querySelectorAll('.tab').forEach(tab => {
+      if (tab.dataset.tabId === tabId) {
+        tab.classList.add('active');
+      } else {
+        tab.classList.remove('active');
+      }
+    });
+    
+    // Find tab data
+    const tabData = tabs.find(tab => tab.id === tabId);
+    if (!tabData) return;
+    
+    // Update editor content
+    if (editor) {
+      editor.setValue(tabData.content);
+    }
+    
+    // Update current file info
+    currentFilePath = tabData.filePath;
+    currentFileName = tabData.fileName;
+    isModified = tabData.isModified;
+    
+    // Update UI
+    updateWindowTitle();
+    updateStatusBar();
+    updatePreview();
+  } catch (error) {
+    console.error('Error switching to tab:', error);
+  }
+}
+
+// Close a tab
+function closeTab(tabId) {
+  try {
+    // Find tab index
+    const tabIndex = tabs.findIndex(tab => tab.id === tabId);
+    if (tabIndex === -1) return;
+    
+    // Check for unsaved changes
+    const tabData = tabs[tabIndex];
+    if (tabData.isModified && !confirm(`You have unsaved changes in ${tabData.fileName}. Continue without saving?`)) {
+      return;
+    }
+    
+    // Remove tab element
+    const tabElement = document.getElementById(`tab-${tabId}`);
+    if (tabElement) {
+      tabElement.remove();
+    }
+    
+    // Remove from tabs array
+    tabs.splice(tabIndex, 1);
+    
+    // If closed tab was active, switch to another tab
+    if (activeTabId === tabId) {
+      if (tabs.length > 0) {
+        // Switch to the next tab, or previous if it was the last one
+        const newActiveIndex = tabIndex < tabs.length ? tabIndex : tabs.length - 1;
+        switchToTab(tabs[newActiveIndex].id);
+      } else {
+        // No tabs left, create a new one
+        createNewTab();
+      }
+    }
+  } catch (error) {
+    console.error('Error closing tab:', error);
+  }
+}
+
+// Update active tab content
+function updateActiveTabContent() {
+  try {
+    if (!activeTabId || !editor) return;
+    
+    // Find active tab
+    const activeTab = tabs.find(tab => tab.id === activeTabId);
+    if (!activeTab) return;
+    
+    // Update content
+    activeTab.content = editor.getValue();
+    activeTab.isModified = isModified;
+    
+    // Update tab title if it's an untitled file
+    if (!activeTab.filePath && activeTab.fileName === 'Untitled') {
+      const firstLine = activeTab.content.split('\n')[0];
+      if (firstLine.trim() !== '') {
+        // Use first line as title (limit to 20 chars)
+        const title = firstLine.trim().substring(0, 20) + (firstLine.trim().length > 20 ? '...' : '');
+        activeTab.fileName = title;
+        
+        // Update tab UI
+        const tabElement = document.querySelector(`.tab[data-tab-id="${activeTabId}"] .tab-title`);
+        if (tabElement) {
+          tabElement.textContent = title;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error updating active tab content:', error);
+  }
+}
 
 // Load Monaco editor with better error handling
 function loadMonacoEditor() {
@@ -62,7 +294,7 @@ function loadMonacoEditor() {
     // Set up Monaco Environment before loading the editor
     window.MonacoEnvironment = {
       getWorkerUrl: function (workerId, label) {
-        // Use absolute path to avoid issues
+        // Use a more robust path resolution
         const path = './node_modules/monaco-editor/min/vs/';
         switch (label) {
           case 'json':
@@ -159,6 +391,7 @@ function initializeEditor() {
       // Listen for changes in the editor
       editor.onDidChangeModelContent(() => {
         isModified = true;
+        updateActiveTabContent();
         updateStatusBar();
         updatePreview();
         updateWindowTitle();
@@ -346,7 +579,7 @@ try {
 async function openFile() {
   try {
     console.log('Opening file');
-    // Check for unsaved changes
+    // Check for unsaved changes in active tab
     if (isModified && !confirm('You have unsaved changes. Continue without saving?')) {
       return;
     }
@@ -356,6 +589,24 @@ async function openFile() {
       if (editor) {
         editor.setValue(result.content);
       }
+      
+      // Update active tab
+      if (activeTabId) {
+        const activeTab = tabs.find(tab => tab.id === activeTabId);
+        if (activeTab) {
+          activeTab.filePath = result.filePath;
+          activeTab.fileName = result.filePath ? result.filePath.split('\\').pop() : 'Untitled';
+          activeTab.content = result.content;
+          activeTab.isModified = false;
+          
+          // Update tab title
+          const tabElement = document.querySelector(`.tab[data-tab-id="${activeTabId}"] .tab-title`);
+          if (tabElement) {
+            tabElement.textContent = activeTab.fileName;
+          }
+        }
+      }
+      
       currentFilePath = result.filePath;
       currentFileName = result.filePath ? result.filePath.split('\\').pop() : 'Untitled';
       isModified = false;
@@ -371,21 +622,23 @@ async function openFile() {
 async function openFilePath(filePath) {
   try {
     console.log('Opening file by path:', filePath);
-    // Check for unsaved changes
+    
+    // Check if file is already open in a tab
+    const existingTab = tabs.find(tab => tab.filePath === filePath);
+    if (existingTab) {
+      switchToTab(existingTab.id);
+      return;
+    }
+    
+    // Check for unsaved changes in active tab
     if (isModified && !confirm('You have unsaved changes. Continue without saving?')) {
       return;
     }
     
     const result = await ipcRenderer.invoke('read-file', filePath);
     if (!result.error) {
-      if (editor) {
-        editor.setValue(result.content);
-      }
-      currentFilePath = filePath;
-      currentFileName = filePath.split('\\').pop();
-      isModified = false;
-      updateWindowTitle();
-      updateStatusBar();
+      // Create new tab with file content
+      createNewTab(filePath, result.content);
     } else {
       alert('Failed to read file: ' + result.error);
     }
@@ -409,6 +662,16 @@ async function saveFile() {
         alert('Failed to save file: ' + result.error);
       } else {
         isModified = false;
+        
+        // Update active tab
+        if (activeTabId) {
+          const activeTab = tabs.find(tab => tab.id === activeTabId);
+          if (activeTab) {
+            activeTab.isModified = false;
+            activeTab.content = content;
+          }
+        }
+        
         updateWindowTitle();
         updateStatusBar();
       }
@@ -434,6 +697,24 @@ async function saveFileAs() {
       currentFilePath = result.filePath;
       currentFileName = result.filePath ? result.filePath.split('\\').pop() : 'Untitled';
       isModified = false;
+      
+      // Update active tab
+      if (activeTabId) {
+        const activeTab = tabs.find(tab => tab.id === activeTabId);
+        if (activeTab) {
+          activeTab.filePath = result.filePath;
+          activeTab.fileName = result.filePath ? result.filePath.split('\\').pop() : 'Untitled';
+          activeTab.isModified = false;
+          activeTab.content = content;
+          
+          // Update tab title
+          const tabElement = document.querySelector(`.tab[data-tab-id="${activeTabId}"] .tab-title`);
+          if (tabElement) {
+            tabElement.textContent = activeTab.fileName;
+          }
+        }
+      }
+      
       updateWindowTitle();
       updateStatusBar();
     } else if (result.error) {
@@ -489,6 +770,12 @@ function updateWindowTitle() {
   try {
     const modifiedIndicator = isModified ? '● ' : '';
     document.title = `${modifiedIndicator}${currentFileName} - MD Reader`;
+    
+    // Update title bar text
+    const titleBarText = document.querySelector('.title-bar-text');
+    if (titleBarText) {
+      titleBarText.textContent = `${modifiedIndicator}${currentFileName} - MD Reader`;
+    }
   } catch (error) {
     console.error('Error updating window title:', error);
   }
@@ -536,6 +823,22 @@ document.addEventListener('keydown', async (e) => {
       e.preventDefault();
       saveFileAs();
     }
+    
+    // Ctrl+T for new tab
+    if (e.ctrlKey && e.key === 't') {
+      console.log('Ctrl+T pressed');
+      e.preventDefault();
+      createNewTab();
+    }
+    
+    // Ctrl+W for close tab
+    if (e.ctrlKey && e.key === 'w') {
+      console.log('Ctrl+W pressed');
+      e.preventDefault();
+      if (activeTabId) {
+        closeTab(activeTabId);
+      }
+    }
   } catch (error) {
     console.error('Error handling keyboard shortcuts:', error);
   }
@@ -545,33 +848,52 @@ document.addEventListener('keydown', async (e) => {
 document.addEventListener('dragover', (e) => {
   console.log('Drag over event');
   e.preventDefault();
+  e.stopPropagation(); // Add this to ensure proper handling
 });
 
 document.addEventListener('drop', async (e) => {
   try {
     console.log('Drop event');
     e.preventDefault();
-    
-    // Check for unsaved changes
-    if (isModified && !confirm('You have unsaved changes. Continue without saving?')) {
-      return;
-    }
+    e.stopPropagation(); // Add this to ensure proper handling
     
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       const filePath = files[0].path;
+      console.log('Dropped file path:', filePath);
       if (filePath.endsWith('.md') || filePath.endsWith('.markdown')) {
         openFilePath(filePath);
+      } else {
+        console.log('Dropped file is not a Markdown file');
       }
+    } else {
+      console.log('No files in drop event');
     }
   } catch (error) {
     console.error('Error handling drop:', error);
   }
 });
 
+// Add drag enter and drag leave events for visual feedback
+document.addEventListener('dragenter', (e) => {
+  console.log('Drag enter event');
+  e.preventDefault();
+  e.stopPropagation();
+  document.body.style.opacity = '0.8';
+});
+
+document.addEventListener('dragleave', (e) => {
+  console.log('Drag leave event');
+  e.preventDefault();
+  e.stopPropagation();
+  document.body.style.opacity = '1';
+});
+
 // Before unload warning
 window.addEventListener('beforeunload', (e) => {
-  if (isModified) {
+  // Check if any tabs have unsaved changes
+  const hasUnsavedTabs = tabs.some(tab => tab.isModified);
+  if (hasUnsavedTabs) {
     e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
     return e.returnValue;
   }

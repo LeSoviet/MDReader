@@ -21,12 +21,9 @@ const createWindow = () => {
       enableRemoteModule: true,
     },
     icon: path.join(__dirname, 'assets', 'icon.png'), // Add icon support
-    // Use custom title bar for better theme control
+    // Use custom title bar
+    frame: false, // Remove default frame
     titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#f3f3f3',
-      symbolColor: '#000000'
-    },
     backgroundColor: '#ffffff' // Set initial background color
   });
 
@@ -46,6 +43,21 @@ function createMenu() {
     {
       label: 'File',
       submenu: [
+        {
+          label: 'New Tab',
+          accelerator: 'CmdOrCtrl+T',
+          click() {
+            // This will be handled in renderer
+          }
+        },
+        {
+          label: 'Close Tab',
+          accelerator: 'CmdOrCtrl+W',
+          click() {
+            // This will be handled in renderer
+          }
+        },
+        { type: 'separator' },
         {
           label: 'Open',
           accelerator: 'CmdOrCtrl+O',
@@ -98,6 +110,14 @@ function createMenu() {
       ]
     },
     {
+      label: 'Window',
+      submenu: [
+        { role: 'minimize' },
+        { role: 'zoom' },
+        { role: 'close' }
+      ]
+    },
+    {
       label: 'Help',
       submenu: [
         {
@@ -117,7 +137,34 @@ function createMenu() {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on('ready', createWindow);
+app.on('ready', () => {
+  createWindow();
+  
+  // Handle file opening from command line arguments or file associations
+  if (process.argv.length >= 2) {
+    const argv = process.argv.slice(1);
+    argv.forEach((arg) => {
+      if (arg.endsWith('.md') || arg.endsWith('.markdown')) {
+        // Send file path to renderer when window is ready
+        if (mainWindow) {
+          mainWindow.webContents.once('dom-ready', () => {
+            mainWindow.webContents.send('open-file-path', arg);
+          });
+        }
+      }
+    });
+  }
+});
+
+// Handle file opening from file associations (Windows)
+app.on('open-file', (event, filePath) => {
+  event.preventDefault();
+  if (filePath.endsWith('.md') || filePath.endsWith('.markdown')) {
+    if (mainWindow) {
+      mainWindow.webContents.send('open-file-path', filePath);
+    }
+  }
+});
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
@@ -136,15 +183,30 @@ app.on('activate', () => {
   }
 });
 
-// Handle file opening from command line arguments or file associations
-app.on('open-file', (event, filePath) => {
-  event.preventDefault();
+// IPC handlers for window controls
+ipcMain.handle('minimize-window', () => {
   if (mainWindow) {
-    mainWindow.webContents.send('open-file-path', filePath);
+    mainWindow.minimize();
   }
 });
 
-// IPC handlers
+ipcMain.handle('maximize-window', () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  }
+});
+
+ipcMain.handle('close-window', () => {
+  if (mainWindow) {
+    mainWindow.close();
+  }
+});
+
+// IPC handlers for file operations
 ipcMain.handle('open-file-dialog', async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openFile'],
@@ -206,20 +268,12 @@ ipcMain.handle('save-file-as', async (event, content) => {
   return { canceled: true };
 });
 
-// Handle theme changes for system title bar
+// Handle theme changes
 ipcMain.handle('set-theme', async (event, theme) => {
   if (mainWindow) {
     if (theme === 'dark') {
-      mainWindow.setTitleBarOverlay({
-        color: '#2d2d2d',
-        symbolColor: '#ffffff'
-      });
       mainWindow.setBackgroundColor('#1e1e1e');
     } else {
-      mainWindow.setTitleBarOverlay({
-        color: '#f3f3f3',
-        symbolColor: '#000000'
-      });
       mainWindow.setBackgroundColor('#ffffff');
     }
   }

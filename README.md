@@ -1,62 +1,71 @@
 # MD Reader
 
-A Visual Studio Code-like Markdown reader built with Electron, Monaco Editor, and Marked.
+A modern Markdown reader with tabs support, built with Electron.
 
 ## Features
 
-- Real-time Markdown editing with Monaco Editor
-- Live preview with synchronized scrolling
-- Syntax highlighting for code blocks with Prism.js
-- Light/dark theme toggle
-- File drag & drop support
-- Standard file operations (Open, Save, Save As)
-- Windows file association for .md files
-- VS Code-like styling and user experience
+- **Tabs System**: Open multiple Markdown files in tabs
+- **Real-time Preview**: See your Markdown rendered as you type
+- **Syntax Highlighting**: Code blocks are syntax highlighted
+- **File Associations**: Automatically opens .md files
+- **Dark/Light Theme**: Toggle between themes
+- **Drag & Drop**: Drag files directly into the application
+- **Resizable Panels**: Adjust the editor and preview panel sizes
 
 ## Installation
 
-1. Clone the repository:
-   ```
-   git clone https://github.com/your-username/MDReader.git
-   ```
+### Using the Release Package (Recommended)
 
-2. Install dependencies:
-   ```
-   npm install
-   ```
+1. Download `dist/MDReader-1.0.0.zip`
+2. Extract the ZIP file to any location on your computer
+3. Run `Start MD Reader.bat` to launch the application
+4. (Optional) Run `register-file-association.bat` to associate .md files with MD Reader
 
-3. Start the application in development mode:
-   ```
-   npm start
-   ```
+### Portable Version
 
-4. Build the application for production:
-   ```
-   npm run build
-   ```
+The extracted folder is completely portable - no installation required. You can:
+- Run it from a USB drive
+- Copy it to any computer
+- Run multiple instances
 
 ## Usage
 
-- Open Markdown files using the File menu or drag and drop
-- Edit Markdown content in the left panel
-- See live preview in the right panel
-- Toggle between light and dark themes using the "Toggle Theme" button
-- Save your work using Ctrl+S or the File menu
+- **Open File**: Ctrl+O or click the Open button
+- **Save File**: Ctrl+S or click the Save button
+- **New Tab**: Ctrl+T or click the New Tab button
+- **Close Tab**: Ctrl+W
+- **Toggle Theme**: Click the Theme button or use the View menu
+
+## File Associations
+
+To associate .md files with MD Reader:
+1. Right-click on any .md file
+2. Select "Open with" -> "Choose another app"
+3. Browse to the location where you extracted MD Reader
+4. Select MDReader.exe
+5. Check "Always use this app to open .md files"
+6. Click OK
+
+Alternatively, run the `register-file-association.bat` script included in the release package.
 
 ## Development
 
-This project uses:
+To run the application in development mode:
 
-- **Electron** for cross-platform desktop application framework
-- **Monaco Editor** for the editing experience (same editor as VS Code)
-- **Marked** for Markdown parsing
-- **Prism.js** for syntax highlighting
-- **Electron Builder** for packaging and distribution
+```bash
+npm install
+npm start
+```
 
-## Roadmap
+To build the application:
 
-See [ROADMAP.md](ROADMAP.md) for future development plans.
+```bash
+npm run build
+```
 
-## License
+To create a release package:
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+```bash
+npm run build
+node package-release.js
+```
