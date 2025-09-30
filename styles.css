@@ -1,0 +1,240 @@
+/* Reset default styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #ffffff;
+  color: #333333;
+}
+
+body.dark-theme {
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+}
+
+.toolbar {
+  padding: 10px;
+  background-color: #f3f3f3;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  gap: 10px;
+}
+
+body.dark-theme .toolbar {
+  background-color: #2d2d2d;
+  border-bottom: 1px solid #3c3c3c;
+}
+
+.toolbar button {
+  padding: 8px 16px;
+  background-color: #007acc;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.toolbar button:hover {
+  background-color: #005a9e;
+}
+
+body.dark-theme .toolbar button {
+  background-color: #0e639c;
+}
+
+body.dark-theme .toolbar button:hover {
+  background-color: #1177bb;
+}
+
+.container {
+  display: flex;
+  height: calc(100vh - 50px);
+}
+
+.editor-container {
+  width: 50%;
+  height: 100%;
+  border-right: 1px solid #ddd;
+}
+
+body.dark-theme .editor-container {
+  border-right: 1px solid #3c3c3c;
+}
+
+#editor {
+  width: 100%;
+  height: 100%;
+}
+
+.preview-container {
+  width: 50%;
+  height: 100%;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+body.dark-theme .preview-container {
+  background-color: #1e1e1e;
+}
+
+/* Preview styles */
+#preview {
+  max-width: 100%;
+  line-height: 1.6;
+}
+
+#preview h1,
+#preview h2,
+#preview h3,
+#preview h4,
+#preview h5,
+#preview h6 {
+  margin: 20px 0 10px;
+}
+
+#preview p {
+  margin: 10px 0;
+}
+
+#preview a {
+  color: #007acc;
+}
+
+body.dark-theme #preview a {
+  color: #3794ff;
+}
+
+#preview code {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+body.dark-theme #preview code {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+#preview pre {
+  background-color: #f6f8fa;
+  padding: 16px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 16px 0;
+}
+
+body.dark-theme #preview pre {
+  background-color: #2d2d2d;
+}
+
+#preview blockquote {
+  border-left: 4px solid #007acc;
+  padding-left: 16px;
+  margin: 16px 0;
+  color: #6a737d;
+}
+
+body.dark-theme #preview blockquote {
+  border-left: 4px solid #3794ff;
+  color: #9e9e9e;
+}
+
+#preview ul,
+#preview ol {
+  padding-left: 30px;
+  margin: 16px 0;
+}
+
+#preview li {
+  margin: 8px 0;
+}
+
+#preview table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 16px 0;
+}
+
+#preview th,
+#preview td {
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+body.dark-theme #preview th,
+body.dark-theme #preview td {
+  border: 1px solid #3c3c3c;
+}
+
+#preview th {
+  background-color: #f6f8fa;
+  font-weight: 600;
+}
+
+body.dark-theme #preview th {
+  background-color: #2d2d2d;
+}
+
+/* Prism.js theme overrides */
+body.dark-theme .token.comment,
+body.dark-theme .token.prolog,
+body.dark-theme .token.doctype,
+body.dark-theme .token.cdata {
+  color: #6a9955;
+}
+
+body.dark-theme .token.punctuation {
+  color: #d4d4d4;
+}
+
+body.dark-theme .token.property,
+body.dark-theme .token.tag,
+body.dark-theme .token.boolean,
+body.dark-theme .token.number,
+body.dark-theme .token.constant,
+body.dark-theme .token.symbol,
+body.dark-theme .token.deleted {
+  color: #b5cea8;
+}
+
+body.dark-theme .token.selector,
+body.dark-theme .token.attr-name,
+body.dark-theme .token.string,
+body.dark-theme .token.char,
+body.dark-theme .token.builtin,
+body.dark-theme .token.inserted {
+  color: #ce9178;
+}
+
+body.dark-theme .token.operator,
+body.dark-theme .token.entity,
+body.dark-theme .token.url,
+.language-css .token.string,
+.style .token.string {
+  color: #d4d4d4;
+}
+
+body.dark-theme .token.atrule,
+body.dark-theme .token.attr-value,
+body.dark-theme .token.keyword {
+  color: #c586c0;
+}
+
+body.dark-theme .token.function {
+  color: #dcdcaa;
+}
+
+body.dark-theme .token.regex,
+body.dark-theme .token.important,
+body.dark-theme .token.variable {
+  color: #d16969;
+}

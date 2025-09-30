@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MD Reader</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="toolbar">
+        <button id="open-btn">Open</button>
+        <button id="save-btn">Save</button>
+        <button id="save-as-btn">Save As</button>
+        <button id="theme-toggle">Toggle Theme</button>
+    </div>
+    
+    <div class="container">
+        <div class="editor-container">
+            <div id="editor"></div>
+        </div>
+        <div class="preview-container">
+            <div id="preview"></div>
+        </div>
+    </div>
+
+    <script src="renderer.js"></script>
+</body>
+</html>
