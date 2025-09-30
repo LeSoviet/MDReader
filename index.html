@@ -2,28 +2,57 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; worker-src 'self' blob:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; font-src * data:; worker-src * blob:;">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MD Reader</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="toolbar">
-        <button id="open-btn">Open</button>
-        <button id="save-btn">Save</button>
-        <button id="save-as-btn">Save As</button>
-        <button id="theme-toggle">Toggle Theme</button>
+        <button id="open-btn" title="Open File (Ctrl+O)">
+            <i class="fas fa-folder-open"></i>
+            <span>Open</span>
+        </button>
+        <button id="save-btn" title="Save File (Ctrl+S)">
+            <i class="fas fa-save"></i>
+            <span>Save</span>
+        </button>
+        <button id="save-as-btn" title="Save As (Ctrl+Shift+S)">
+            <i class="fas fa-file-export"></i>
+            <span>Save As</span>
+        </button>
+        <button id="theme-toggle" title="Toggle Theme">
+            <i class="fas fa-moon" id="theme-icon"></i>
+            <span>Theme</span>
+        </button>
     </div>
     
     <div class="container">
-        <div class="editor-container">
+        <div class="panel editor-panel">
             <div id="editor"></div>
         </div>
-        <div class="preview-container">
+        <div class="resizer" id="resizer"></div>
+        <div class="panel preview-panel">
             <div id="preview"></div>
         </div>
     </div>
+    
+    <div class="status-bar" id="status-bar">
+        Untitled - Line 1, Column 1 - Light - Saved
+    </div>
 
+    <script>
+        // Handle errors during script loading
+        window.addEventListener('error', function(e) {
+            console.error('Global error:', e.error);
+        });
+        
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('Unhandled promise rejection:', e.reason);
+        });
+    </script>
     <script src="renderer.js"></script>
 </body>
 </html>

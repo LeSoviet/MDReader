@@ -26,6 +26,7 @@ body.dark-theme {
   border-bottom: 1px solid #ddd;
   display: flex;
   gap: 10px;
+  align-items: center;
 }
 
 body.dark-theme .toolbar {
@@ -41,6 +42,9 @@ body.dark-theme .toolbar {
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .toolbar button:hover {
@@ -55,19 +59,24 @@ body.dark-theme .toolbar button:hover {
   background-color: #1177bb;
 }
 
+/* Icon colors for better theme matching */
+.toolbar button i {
+  color: #ffffff;
+}
+
 .container {
   display: flex;
-  height: calc(100vh - 50px);
+  height: calc(100vh - 80px); /* Adjusted for toolbar and status bar */
+  width: 100%;
 }
 
-.editor-container {
-  width: 50%;
+.panel {
   height: 100%;
-  border-right: 1px solid #ddd;
+  overflow: hidden;
 }
 
-body.dark-theme .editor-container {
-  border-right: 1px solid #3c3c3c;
+.editor-panel {
+  width: 50%;
 }
 
 #editor {
@@ -75,14 +84,35 @@ body.dark-theme .editor-container {
   height: 100%;
 }
 
-.preview-container {
+.resizer {
+  width: 5px;
+  background-color: #ddd;
+  cursor: col-resize;
+  position: relative;
+  z-index: 10;
+}
+
+body.dark-theme .resizer {
+  background-color: #3c3c3c;
+}
+
+.resizer:hover {
+  background-color: #007acc;
+  box-shadow: inset 0 0 0 1px rgba(0, 122, 204, 0.5);
+}
+
+body.dark-theme .resizer:hover {
+  background-color: #007acc;
+  box-shadow: inset 0 0 0 1px rgba(0, 122, 204, 0.5);
+}
+
+.preview-panel {
   width: 50%;
-  height: 100%;
   overflow-y: auto;
   padding: 20px;
 }
 
-body.dark-theme .preview-container {
+body.dark-theme .preview-panel {
   background-color: #1e1e1e;
 }
 
@@ -265,6 +295,24 @@ body.dark-theme #preview tr:nth-child(2n) {
   box-sizing: content-box;
 }
 
+/* Status bar */
+.status-bar {
+  height: 22px;
+  padding: 0 10px;
+  background-color: #007acc;
+  color: white;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  border-top: 1px solid #005a9e;
+}
+
+body.dark-theme .status-bar {
+  background-color: #005a9e;
+  border-top: 1px solid #004578;
+}
+
 /* Prism.js theme overrides to match VS Code */
 body.dark-theme .token.comment,
 body.dark-theme .token.prolog,
@@ -318,4 +366,24 @@ body.dark-theme .token.regex,
 body.dark-theme .token.important,
 body.dark-theme .token.variable {
   color: #d16969;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+    height: calc(100vh - 100px);
+  }
+  
+  .editor-panel,
+  .preview-panel {
+    width: 100%;
+    height: 50%;
+  }
+  
+  .resizer {
+    width: 100%;
+    height: 5px;
+    cursor: row-resize;
+  }
 }

@@ -20,7 +20,14 @@ const createWindow = () => {
       contextIsolation: false,
       enableRemoteModule: true,
     },
-    icon: path.join(__dirname, 'assets', 'icon.png') // Add icon support
+    icon: path.join(__dirname, 'assets', 'icon.png'), // Add icon support
+    // Use custom title bar for better theme control
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#f3f3f3',
+      symbolColor: '#000000'
+    },
+    backgroundColor: '#ffffff' // Set initial background color
   });
 
   // and load the index.html of the app.
@@ -197,4 +204,23 @@ ipcMain.handle('save-file-as', async (event, content) => {
     }
   }
   return { canceled: true };
+});
+
+// Handle theme changes for system title bar
+ipcMain.handle('set-theme', async (event, theme) => {
+  if (mainWindow) {
+    if (theme === 'dark') {
+      mainWindow.setTitleBarOverlay({
+        color: '#2d2d2d',
+        symbolColor: '#ffffff'
+      });
+      mainWindow.setBackgroundColor('#1e1e1e');
+    } else {
+      mainWindow.setTitleBarOverlay({
+        color: '#f3f3f3',
+        symbolColor: '#000000'
+      });
+      mainWindow.setBackgroundColor('#ffffff');
+    }
+  }
 });
