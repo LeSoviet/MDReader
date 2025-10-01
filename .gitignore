@@ -6,44 +6,77 @@
 # Testing
 /coverage
 
-# Production
+# Build outputs
 /build
-/dist/
-!/dist/MD Reader Setup 1.0.0.exe
-/release
 
-# Misc
+# Distribution directories (exclude most contents but allow final builds)
+/dist/*
+!/dist/*.exe
+!/dist/*.zip
+!/dist/release/
+!/dist/installer/
+
+# Specific exclusions for dist subdirectories
+/dist/installer/*
+!/dist/installer/*.exe
+!/dist/installer/*.blockmap
+!/dist/installer/*.yml
+
+# Logs
+logs
+*.log
+
+# OS generated files
+Thumbs.db
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE and editor files
+/.vscode
+/.idea
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# Environment files
+.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
+# npm
+npm-debug.log*
+.npm
+
+# Debugging
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Editor directories and files
-/.vscode
-/.idea
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw*
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
 
-# OS generated files
-Thumbs.db
+# Coverage directory used by Jest
+coverage/
 
-# Log files
-*.log
+# Temporary folders
+tmp/
+temp/
 
-# Optional npm cache directory
-.npm
-
-# Electron build artifacts
+# Electron specific build artifacts
 *.exe
-!/dist/MD Reader Setup 1.0.0.exe
+*.msi
 *.dmg
 *.AppImage
 *.deb
@@ -51,18 +84,16 @@ Thumbs.db
 *.snap
 *.tar.gz
 *.zip
+win-unpacked/
+linux-unpacked/
+mac-unpacked/
+builder-debug.yml
+builder-effective-config.yaml
 
-# Windows files
-*.exe
-*.msi
-
-# macOS files
-*.dmg
-
-# Linux files
-*.AppImage
-*.deb
-*.rpm
+# Refactoring and documentation files
 REFACTOR-SUMMARY.md
 NEW-FEATURES.md
 CHANGELOG-FIXES.md
+
+# System files
+desktop.ini
