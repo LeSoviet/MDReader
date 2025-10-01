@@ -11,7 +11,7 @@ if (require('electron-squirrel-startup')) {
 
 let mainWindow;
 
-const createWindow = () => {
+const createWindow = function() {
   // Create the browser window.
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -25,7 +25,7 @@ const createWindow = () => {
     // Use custom title bar
     frame: false, // Remove default frame
     titleBarStyle: 'hidden',
-    backgroundColor: '#ffffff' // Set initial background color
+    backgroundColor: '#1e1e1e' // Set initial background color to standard dark
   });
 
   // Handle file drops
@@ -158,7 +158,10 @@ app.on('ready', () => {
         // Send file path to renderer when window is ready
         if (mainWindow) {
           mainWindow.webContents.once('dom-ready', () => {
-            mainWindow.webContents.send('open-file-path', arg);
+            // Add a small delay to ensure the editor is fully initialized
+            setTimeout(() => {
+              mainWindow.webContents.send('open-file-path', arg);
+            }, 500);
           });
         }
       }

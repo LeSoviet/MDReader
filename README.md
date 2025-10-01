@@ -13,9 +13,10 @@ A modern Markdown reader with tabs support, built with Electron.
 - **Real-time Preview**: See your Markdown rendered as you type
 - **Syntax Highlighting**: Code blocks are syntax highlighted
 - **File Associations**: Automatically opens .md files
-- **Dark/Light Theme**: Toggle between themes
+- **Dark/Light Theme**: Toggle between themes with persistent settings
 - **Drag & Drop**: Drag files directly into the application
 - **Resizable Panels**: Adjust the editor and preview panel sizes
+- **Ready-to-Write**: Starts with an "Untitled" tab ready for immediate writing
 
 ## Installation
 
@@ -40,6 +41,8 @@ The extracted folder is completely portable - no installation required. You can:
 - **New Tab**: Ctrl+T or click the New Tab button
 - **Close Tab**: Ctrl+W
 - **Toggle Theme**: Click the Theme button or use the View menu
+
+On startup, MD Reader automatically creates an "Untitled" tab ready for you to start writing immediately.
 
 ## File Associations
 

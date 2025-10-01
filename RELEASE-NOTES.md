@@ -7,9 +7,10 @@
 - Real-time preview of Markdown content
 - Syntax highlighting for code blocks
 - File associations for .md and .markdown files
-- Dark/light theme toggle
+- Dark/light theme toggle with persistent settings
 - Drag & drop support
 - Resizable editor and preview panels
+- Ready-to-write "Untitled" tab on startup
 
 ### Changes to Disable Dev Mode
 - Removed `mainWindow.webContents.openDevTools()` call from [main.js](main.js)

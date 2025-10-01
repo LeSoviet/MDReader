@@ -40,6 +40,13 @@ function createNewTab(filePath = null, content = null) {
       tabsList.appendChild(tabElement);
     }
     
+    // Move the new tab button to the end
+    const tabsControls = document.querySelector('.tabs-controls');
+    const tabsWrapper = document.querySelector('.tabs-wrapper');
+    if (tabsControls && tabsWrapper) {
+      tabsWrapper.appendChild(tabsControls);
+    }
+    
     tabElement.addEventListener('click', (e) => {
       if (e.target.classList.contains('tab-close') || e.target.closest('.tab-close')) {
         closeTab(tabId);
@@ -123,7 +130,20 @@ function closeTab(tabId, skipConfirmation = false) {
         const newActiveIndex = tabIndex < state.tabs.length ? tabIndex : state.tabs.length - 1;
         switchToTab(state.tabs[newActiveIndex].id);
       } else {
-        createNewTab();
+        // No tabs left, but don't create a new one automatically
+        // Reset editor content to empty
+        if (state.editor) {
+          state.editor.setValue('');
+        }
+        state.currentFilePath = null;
+        state.currentFileName = 'Untitled';
+        state.isModified = false;
+        
+        const { updateWindowTitle, updateStatusBar } = require('./ui');
+        const { updatePreview } = require('./preview');
+        updateWindowTitle();
+        updateStatusBar();
+        updatePreview();
       }
     }
   } catch (error) {

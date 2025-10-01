@@ -20,6 +20,30 @@ function updatePreview() {
       return;
     }
     
+    // If no tabs, show empty state
+    if (state.tabs.length === 0) {
+      const textColor = state.isDarkTheme ? '#888' : '#666';
+      preview.innerHTML = 
+        '<div style="' +
+        'display: flex;' +
+        'align-items: center;' +
+        'justify-content: center;' +
+        'height: 100%;' +
+        'min-height: 200px;' +
+        'color: ' + textColor + ';' +
+        'font-size: 16px;' +
+        'text-align: center;' +
+        'padding: 40px;' +
+        '">' +
+        '<div>' +
+        '<i class="fas fa-file-alt" style="font-size: 48px; margin-bottom: 20px;"></i>' +
+        '<p style="margin: 0; font-weight: 500;">No tabs open</p>' +
+        '<p style="margin: 10px 0 0 0; font-size: 14px;">Click the + button to create a new tab</p>' +
+        '</div>' +
+        '</div>';
+      return;
+    }
+    
     if (!state.editor) {
       preview.innerHTML = '<p>Editor not initialized. Please check the console for errors.</p>';
       return;
@@ -28,7 +52,26 @@ function updatePreview() {
     const content = state.editor.getValue();
     
     if (!content || content.trim() === '') {
-      preview.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">No content to preview. Start typing in the editor...</p>';
+      const textColor = state.isDarkTheme ? '#888' : '#666';
+      const iconColor = state.isDarkTheme ? '#666' : '#999';
+      preview.innerHTML = 
+        '<div style="' +
+        'display: flex;' +
+        'align-items: center;' +
+        'justify-content: center;' +
+        'height: 100%;' +
+        'min-height: 200px;' +
+        'color: ' + textColor + ';' +
+        'font-size: 16px;' +
+        'text-align: center;' +
+        'padding: 40px;' +
+        '">' +
+        '<div>' +
+        '<i class="fas fa-file-alt" style="font-size: 48px; margin-bottom: 20px; color: ' + iconColor + ';"></i>' +
+        '<p style="margin: 0; font-weight: 500;">No content to preview</p>' +
+        '<p style="margin: 10px 0 0 0; font-size: 14px;">Start typing in the editor...</p>' +
+        '</div>' +
+        '</div>';
       return;
     }
     

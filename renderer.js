@@ -215,6 +215,57 @@ function resolveMonacoResourceRoot() {
   };
 }
 
+// Add function to load theme preference
+function loadThemePreference() {
+  try {
+    const savedTheme = localStorage.getItem('mdreader-theme');
+    // If no saved theme, default to dark theme
+    const themeToUse = savedTheme || 'dark';
+    
+    if (themeToUse) {
+      // Apply saved theme
+      const shouldUseDarkTheme = themeToUse === 'dark';
+      if (shouldUseDarkTheme !== isDarkTheme) {
+        // Only toggle if different from current state
+        isDarkTheme = shouldUseDarkTheme;
+        const themeIcon = document.getElementById('theme-icon');
+        
+        if (isDarkTheme) {
+          // Apply dark theme
+          document.body.classList.add('dark-theme');
+          if (themeIcon) {
+            themeIcon.classList.remove('fa-moon');
+            themeIcon.classList.add('fa-sun');
+          }
+          // Notify main process to update system title bar
+          ipcRenderer.invoke('set-theme', 'dark');
+        } else {
+          // Apply light theme
+          document.body.classList.remove('dark-theme');
+          if (themeIcon) {
+            themeIcon.classList.remove('fa-sun');
+            themeIcon.classList.add('fa-moon');
+          }
+          // Notify main process to update system title bar
+          ipcRenderer.invoke('set-theme', 'light');
+        }
+        
+        // Update editor theme if it exists
+        if (editor) {
+          editor.updateOptions({ theme: isDarkTheme ? 'vs-dark' : 'vs' });
+        }
+      }
+    }
+    
+    // Update UI to reflect theme
+    updateStatusBar();
+    updateWindowTitle();
+    updatePreview();
+  } catch (error) {
+    console.error('Error loading theme preference:', error);
+  }
+}
+
 // Add global error handlers for debugging
 window.addEventListener('error', function(e) {
   console.error('Global error caught:', e.error);
@@ -230,10 +281,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load recent files
   recentFiles = loadRecentFiles();
   
+  // Load theme preference
+  loadThemePreference();
+  
   // Initialize window controls
   initializeWindowControls();
   
-  // Initialize tab system
+  // Initialize tab system (now starts empty)
   initializeTabSystem();
   
   // Initialize UI elements even if Monaco fails
@@ -244,6 +298,15 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Try to load Monaco editor
   loadMonacoEditor();
+  
+  // Ensure the + button is properly positioned
+  setTimeout(() => {
+    const tabsControls = document.querySelector('.tabs-controls');
+    const tabsWrapper = document.querySelector('.tabs-wrapper');
+    if (tabsControls && tabsWrapper) {
+      tabsWrapper.appendChild(tabsControls);
+    }
+  }, 100);
 });
 
 // Initialize custom window controls
@@ -278,7 +341,7 @@ function initializeWindowControls() {
 // Initialize tab system
 function initializeTabSystem() {
   try {
-    // Create initial tab
+    // Create initial "Untitled" tab ready for writing
     createNewTab();
     
     // Add event listeners for tab controls
@@ -338,6 +401,13 @@ function createNewTab(filePath = null, content = null) {
     const tabsList = document.getElementById('tabs-list');
     if (tabsList) {
       tabsList.appendChild(tabElement);
+    }
+    
+    // Move the new tab button to the end
+    const tabsControls = document.querySelector('.tabs-controls');
+    const tabsWrapper = document.querySelector('.tabs-wrapper');
+    if (tabsControls && tabsWrapper) {
+      tabsWrapper.appendChild(tabsControls);
     }
     
     // Add event listeners
@@ -443,8 +513,19 @@ function closeTab(tabId, skipConfirmation = false) {
         const newActiveIndex = tabIndex < tabs.length ? tabIndex : tabs.length - 1;
         switchToTab(tabs[newActiveIndex].id);
       } else {
-        // No tabs left, create a new one
-        createNewTab();
+        // No tabs left, but don't create a new one automatically
+        // Reset editor content to empty
+        if (editor) {
+          editor.setValue('');
+        }
+        currentFilePath = null;
+        currentFileName = 'Untitled';
+        isModified = false;
+        
+        updateWindowTitle();
+        updateWordCount();
+        updateStatusBar();
+        updatePreview();
       }
     }
   } catch (error) {
@@ -572,7 +653,7 @@ function initializeEditor() {
       editor = monaco.editor.create(editorContainer, {
         value: '',
         language: 'markdown',
-        theme: 'vs',
+        theme: isDarkTheme ? 'vs-dark' : 'vs',
         automaticLayout: true,
         minimap: {
           enabled: true
@@ -583,15 +664,16 @@ function initializeEditor() {
         wordWrap: 'on'
       });
 
-      // Initial preview render - force it even if empty
-      // Use multiple timeouts to ensure it renders
-      updatePreview();
+      // Initial preview render with delays to ensure proper rendering
       setTimeout(() => {
         updatePreview();
-      }, 50);
+      }, 10);
       setTimeout(() => {
         updatePreview();
-      }, 200);
+      }, 100);
+      setTimeout(() => {
+        updatePreview();
+      }, 300);
 
       // Listen for changes in the editor
       editor.onDidChangeModelContent(() => {
@@ -609,6 +691,11 @@ function initializeEditor() {
           }
         }
       });
+      
+      // Update UI to reflect empty state
+      updateStatusBar();
+      updateWindowTitle();
+      updatePreview();
     } else {
       console.error('Editor container not found');
       showEditorError('Editor container not found.');
@@ -742,6 +829,30 @@ function updatePreview() {
       return;
     }
     
+    // If no tabs, show empty state
+    if (tabs.length === 0) {
+      const textColor = isDarkTheme ? '#888' : '#666';
+      preview.innerHTML = 
+        '<div style="' +
+        'display: flex;' +
+        'align-items: center;' +
+        'justify-content: center;' +
+        'height: 100%;' +
+        'min-height: 200px;' +
+        'color: ' + textColor + ';' +
+        'font-size: 16px;' +
+        'text-align: center;' +
+        'padding: 40px;' +
+        '">' +
+        '<div>' +
+        '<i class="fas fa-file-alt" style="font-size: 48px; margin-bottom: 20px;"></i>' +
+        '<p style="margin: 0; font-weight: 500;">No tabs open</p>' +
+        '<p style="margin: 10px 0 0 0; font-size: 14px;">Click the + button to create a new tab</p>' +
+        '</div>' +
+        '</div>';
+      return;
+    }
+    
     if (!editor) {
       preview.innerHTML = '<p>Editor not initialized. Please check the console for errors.</p>';
       return;
@@ -752,32 +863,30 @@ function updatePreview() {
     if (!content || content.trim() === '') {
       const textColor = isDarkTheme ? '#888' : '#666';
       const iconColor = isDarkTheme ? '#666' : '#999';
-      preview.innerHTML = `
-        <div style="
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          height: 100%;
-          min-height: 200px;
-          color: ${textColor};
-          font-size: 16px;
-          text-align: center;
-          padding: 40px;
-        ">
-          <div>
-            <i class="fas fa-file-alt" style="font-size: 48px; margin-bottom: 20px; color: ${iconColor};"></i>
-            <p style="margin: 0; font-weight: 500;">No content to preview</p>
-            <p style="margin: 10px 0 0 0; font-size: 14px;">Start typing in the editor...</p>
-          </div>
-        </div>
-      `;
+      preview.innerHTML = 
+        '<div style="' +
+        'display: flex;' +
+        'align-items: center;' +
+        'justify-content: center;' +
+        'height: 100%;' +
+        'min-height: 200px;' +
+        'color: ' + textColor + ';' +
+        'font-size: 16px;' +
+        'text-align: center;' +
+        'padding: 40px;' +
+        '">' +
+        '<div>' +
+        '<i class="fas fa-file-alt" style="font-size: 48px; margin-bottom: 20px; color: ' + iconColor + ';"></i>' +
+        '<p style="margin: 0; font-weight: 500;">No content to preview</p>' +
+        '<p style="margin: 10px 0 0 0; font-size: 14px;">Start typing in the editor...</p>' +
+        '</div>' +
+        '</div>';
       return;
     }
     
     const html = marked.parse(content);
     preview.innerHTML = html;
     
-    // Highlight code blocks
     Prism.highlightAll();
     
     // Add event listener for link clicks
@@ -929,6 +1038,13 @@ async function openFilePath(filePath) {
     console.log('File read result:', result);
     
     if (!result.error) {
+      // Ensure editor is initialized before creating tab
+      if (!editor) {
+        console.log('Editor not initialized, waiting...');
+        // Wait a bit more for editor initialization
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+      
       createNewTab(normalizedPath, result.content);
       // Add to recent files
       addToRecentFiles(normalizedPath);
@@ -1058,42 +1174,6 @@ function toggleTheme() {
   }
 }
 
-function updateWindowTitle() {
-  try {
-    const modifiedIndicator = isModified ? '● ' : '';
-    document.title = `${modifiedIndicator}${currentFileName} - MD Reader`;
-    
-    // Update title bar text
-    const titleBarText = document.querySelector('.title-bar-text');
-    if (titleBarText) {
-      titleBarText.textContent = `${modifiedIndicator}${currentFileName} - MD Reader`;
-    }
-  } catch (error) {
-    console.error('Error updating window title:', error);
-  }
-}
-
-function updateStatusBar() {
-  try {
-    const statusBar = document.getElementById('status-bar');
-    if (statusBar) {
-      let line = 1, column = 1;
-      if (editor) {
-        const lineColumn = editor.getPosition();
-        line = lineColumn ? lineColumn.lineNumber : 1;
-        column = lineColumn ? lineColumn.column : 1;
-      }
-      const themeText = isDarkTheme ? 'Dark' : 'Light';
-      const modifiedText = isModified ? 'Modified' : 'Saved';
-      const viewModeText = viewMode === 'split' ? 'Split' : viewMode === 'editor' ? 'Editor Only' : 'Preview Only';
-      // Feature 1: Add word and character count
-      statusBar.textContent = `${currentFileName} - Line ${line}, Col ${column} - Words: ${wordCount} - Chars: ${charCount} - ${themeText} - ${modifiedText} - ${viewModeText}`;
-    }
-  } catch (error) {
-    console.error('Error updating status bar:', error);
-  }
-}
-
 function toggleViewMode() {
   try {
     const editorPanel = document.getElementById('editor-panel');
@@ -1148,6 +1228,103 @@ function toggleViewMode() {
     console.error('Error toggling view mode:', error);
   }
 }
+
+function updateStatusBar() {
+  try {
+    const statusBar = document.getElementById('status-bar');
+    if (statusBar) {
+      // If no tabs, show empty state
+      if (tabs.length === 0) {
+        const themeText = isDarkTheme ? 'Dark' : 'Light';
+        statusBar.textContent = `No tabs open - ${themeText} - Ready`;
+        return;
+      }
+      
+      let line = 1, column = 1;
+      if (editor) {
+        const lineColumn = editor.getPosition();
+        line = lineColumn ? lineColumn.lineNumber : 1;
+        column = lineColumn ? lineColumn.column : 1;
+      }
+      const themeText = isDarkTheme ? 'Dark' : 'Light';
+      const modifiedText = isModified ? 'Modified' : 'Saved';
+      const viewModeText = viewMode === 'split' ? 'Split' : viewMode === 'editor' ? 'Editor Only' : 'Preview Only';
+      // Feature 1: Add word and character count
+      statusBar.textContent = `${currentFileName} - Line ${line}, Col ${column} - Words: ${wordCount} - Chars: ${charCount} - ${themeText} - ${modifiedText} - ${viewModeText}`;
+    }
+  } catch (error) {
+    console.error('Error updating status bar:', error);
+  }
+}
+
+function updateWindowTitle() {
+  try {
+    // If no tabs, show empty state
+    if (tabs.length === 0) {
+      document.title = 'MD Reader';
+      const titleBarText = document.querySelector('.title-bar-text');
+      if (titleBarText) {
+        titleBarText.textContent = 'MD Reader';
+      }
+      return;
+    }
+    
+    const modifiedIndicator = isModified ? '● ' : '';
+    document.title = `${modifiedIndicator}${currentFileName} - MD Reader`;
+    
+    // Update title bar text
+    const titleBarText = document.querySelector('.title-bar-text');
+    if (titleBarText) {
+      titleBarText.textContent = `${modifiedIndicator}${currentFileName} - MD Reader`;
+    }
+  } catch (error) {
+    console.error('Error updating window title:', error);
+  }
+}
+
+// Autosave functionality
+function resetAutoSaveTimer() {
+  if (autoSaveTimer) {
+    clearTimeout(autoSaveTimer);
+  }
+  
+  autoSaveTimer = setTimeout(() => {
+    performAutoSave();
+  }, autoSaveInterval);
+}
+
+function performAutoSave() {
+  if (!autoSaveEnabled || !currentFilePath || !editor) return;
+  
+  const currentContent = editor.getValue();
+  
+  // Only save if content has changed since last save
+  if (currentContent !== lastSavedContent && isModified) {
+    saveFile(true); // Silent save
+  }
+}
+
+function stopAutoSave() {
+  if (autoSaveTimer) {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = null;
+  }
+}
+
+// Before unload - removed blocking confirmation
+// Autosave will handle saving, no need to block user
+window.addEventListener('beforeunload', (e) => {
+  // Perform final autosave if enabled
+  if (autoSaveEnabled && currentFilePath && isModified) {
+    performAutoSave();
+  }
+  
+  // Stop autosave timer
+  stopAutoSave();
+  
+  // Don't block the close - let it happen
+  // Users can manually save if they want via Ctrl+S
+});
 
 // Keyboard shortcuts
 document.addEventListener('keydown', async (e) => {
@@ -1303,55 +1480,3 @@ function initializeDragDrop() {
     }
   });
 }
-
-// Autosave functionality
-function resetAutoSaveTimer() {
-  if (autoSaveTimer) {
-    clearTimeout(autoSaveTimer);
-  }
-  
-  autoSaveTimer = setTimeout(() => {
-    performAutoSave();
-  }, autoSaveInterval);
-}
-
-function performAutoSave() {
-  if (!autoSaveEnabled || !currentFilePath || !editor) return;
-  
-  const currentContent = editor.getValue();
-  
-  // Only save if content has changed since last save
-  if (currentContent !== lastSavedContent && isModified) {
-    saveFile(true); // Silent save
-  }
-}
-
-function stopAutoSave() {
-  if (autoSaveTimer) {
-    clearTimeout(autoSaveTimer);
-    autoSaveTimer = null;
-  }
-}
-
-// Before unload - removed blocking confirmation
-// Autosave will handle saving, no need to block user
-window.addEventListener('beforeunload', (e) => {
-  // Perform final autosave if enabled
-  if (autoSaveEnabled && currentFilePath && isModified) {
-    performAutoSave();
-  }
-  
-  // Stop autosave timer
-  stopAutoSave();
-  
-  // Don't block the close - let it happen
-  // Users can manually save if they want via Ctrl+S
-});
-
-
-
-
-
-
-
-
