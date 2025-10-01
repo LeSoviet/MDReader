@@ -8,7 +8,8 @@
 
 # Production
 /build
-/dist
+/dist/
+!/dist/MD Reader Setup 1.0.0.exe
 /release
 
 # Misc
@@ -42,6 +43,7 @@ Thumbs.db
 
 # Electron build artifacts
 *.exe
+!/dist/MD Reader Setup 1.0.0.exe
 *.dmg
 *.AppImage
 *.deb
