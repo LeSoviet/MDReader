@@ -779,12 +779,51 @@ function updatePreview() {
     
     // Highlight code blocks
     Prism.highlightAll();
+    
+    // Add event listener for link clicks
+    preview.addEventListener('click', handlePreviewLinkClick);
   } catch (error) {
     console.error('Error updating preview:', error);
     const preview = document.getElementById('preview');
     if (preview) {
       preview.innerHTML = '<p style="color: red;">Error rendering preview. Please check the console for errors.</p>';
     }
+  }
+}
+
+/**
+ * Handles click events on links in the preview
+ */
+async function handlePreviewLinkClick(event) {
+  // Check if clicked element is an anchor tag
+  if (event.target.tagName === 'A') {
+    event.preventDefault();
+    const href = event.target.getAttribute('href');
+    
+    // Only handle relative file paths (not external URLs)
+    if (href && !/^https?:\/\//.test(href)) {
+      try {
+        // Resolve the file path relative to the current file
+        if (currentFilePath) {
+          const dir = path.dirname(currentFilePath);
+          const fullPath = path.resolve(dir, href);
+          
+          // Check if file exists before trying to open it
+          const result = await ipcRenderer.invoke('check-file-exists', fullPath);
+          if (result.exists) {
+            openFilePath(fullPath);
+          } else {
+            alert(`File not found: ${href}`);
+          }
+        } else {
+          alert('Cannot open linked file: Current file path is unknown');
+        }
+      } catch (error) {
+        console.error('Error opening linked file:', error);
+        alert(`Failed to open linked file: ${error.message}`);
+      }
+    }
+    // For external URLs, we could open in default browser, but for now we'll just ignore them
   }
 }
 
@@ -871,18 +910,27 @@ async function openFile() {
 
 async function openFilePath(filePath) {
   try {
-    const normalizedPath = filePath.replace(/\\/g, '\\');
+    console.log('openFilePath called with:', filePath);
+    // Normalize the file path
+    const normalizedPath = path.resolve(filePath);
+    console.log('Normalized path:', normalizedPath);
     
-    const existingTab = tabs.find(tab => tab.filePath && tab.filePath.replace(/\\/g, '\\') === normalizedPath);
+    // Check if file is already open in a tab
+    const existingTab = tabs.find(tab => tab.filePath && path.resolve(tab.filePath) === normalizedPath);
     if (existingTab) {
+      console.log('File already open in tab:', existingTab.id);
       switchToTab(existingTab.id);
       return;
     }
     
+    console.log('Reading file from path:', normalizedPath);
+    // Read the file content
     const result = await ipcRenderer.invoke('read-file', normalizedPath);
+    console.log('File read result:', result);
+    
     if (!result.error) {
       createNewTab(normalizedPath, result.content);
-      // Feature 3: Add to recent files
+      // Add to recent files
       addToRecentFiles(normalizedPath);
     } else {
       console.error('Error reading file:', result.error);
@@ -1146,7 +1194,9 @@ let dragCounter = 0;
 function initializeDragDrop() {
   const hasFiles = (event) => {
     const types = Array.from(event.dataTransfer?.types || []);
-    return types.includes('Files');
+    const result = types.includes('Files');
+    console.log('hasFiles check:', types, result);
+    return result;
   };
 
   const showOverlay = () => {
@@ -1186,30 +1236,69 @@ function initializeDragDrop() {
   });
 
   document.addEventListener('drop', async (event) => {
-    if (!hasFiles(event)) return;
+    console.log('Drop event triggered', event);
+    if (!hasFiles(event)) {
+      console.log('No files in drop event');
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     hideOverlay();
 
-    const files = Array.from(event.dataTransfer.files || []);
+    // For Electron, we can get file paths from dataTransfer.files
+    const files = event.dataTransfer.files;
+    console.log('Dropped files:', files);
+    
     if (files.length === 0) {
+      console.log('No files to process');
       return;
     }
 
     const supportedExtensions = new Set(['.md', '.markdown', '.txt']);
-    for (const file of files) {
-      const filePath = file.path;
-      if (!filePath) continue;
-      const extension = path.extname(filePath).toLowerCase();
-      if (!supportedExtensions.has(extension)) {
-        console.warn('Unsupported file dropped:', filePath);
-        continue;
-      }
-
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      console.log('Processing file:', file);
+      
       try {
+        // Try to get file path - in Electron, File objects from drag/drop should have path
+        let filePath = file.path;
+        
+        // If path is not available, try to get it via IPC
+        if (!filePath || filePath === 'undefined') {
+          console.log('File path not available directly, trying alternative method');
+          // Use the file name and try to read it as a temporary file
+          const fileContent = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = reject;
+            reader.readAsText(file);
+          });
+          
+          // Create a temporary file path based on the file name
+          const tempPath = await ipcRenderer.invoke('create-temp-file', file.name, fileContent);
+          filePath = tempPath;
+        }
+        
+        console.log('File path:', filePath);
+        
+        if (!filePath) {
+          console.log('Could not get file path');
+          continue;
+        }
+        
+        const extension = path.extname(filePath).toLowerCase();
+        console.log('File extension:', extension);
+        
+        if (!supportedExtensions.has(extension)) {
+          console.warn('Unsupported file dropped:', filePath);
+          continue;
+        }
+
+        console.log('Opening file:', filePath);
         await openFilePath(filePath);
       } catch (error) {
         console.error('Error opening dropped file:', error);
+        alert('Failed to open file: ' + error.message);
       }
     }
   });

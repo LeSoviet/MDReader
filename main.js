@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const { webUtils } = require('electron');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -27,11 +28,23 @@ const createWindow = () => {
     backgroundColor: '#ffffff' // Set initial background color
   });
 
+  // Handle file drops
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    // Prevent navigation when dropping files
+    if (url.startsWith('file://')) {
+      event.preventDefault();
+      const filePath = decodeURIComponent(url.replace('file:///', ''));
+      if (filePath.endsWith('.md') || filePath.endsWith('.markdown')) {
+        mainWindow.webContents.send('open-file-path', filePath);
+      }
+    }
+  });
+
   // and load the index.html of the app.
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
   // Open the DevTools for debugging
-  // mainWindow.webContents.openDevTools();
+  mainWindow.webContents.openDevTools();
   
   // Create the application menu
   createMenu();
@@ -228,6 +241,39 @@ ipcMain.handle('open-file-dialog', async () => {
   return { canceled: true };
 });
 
+// Handle getting file path from File object
+ipcMain.handle('get-file-path', async (event, filePath) => {
+  try {
+    // If we already have a path, return it
+    if (filePath && typeof filePath === 'string' && filePath !== 'undefined') {
+      return filePath;
+    }
+    
+    // For modern Electron, we would use webUtils.getPathForFile()
+    // but since we're dealing with drag and drop, the file.path should be available
+    // This is a fallback for when file.path is undefined
+    return null;
+  } catch (error) {
+    console.error('Error getting file path:', error);
+    return null;
+  }
+});
+
+// Handle creating temporary file for drag and drop
+ipcMain.handle('create-temp-file', async (event, fileName, content) => {
+  try {
+    const os = require('os');
+    const tempDir = os.tmpdir();
+    const tempFilePath = path.join(tempDir, 'mdreader_' + Date.now() + '_' + fileName);
+    
+    fs.writeFileSync(tempFilePath, content, 'utf8');
+    return tempFilePath;
+  } catch (error) {
+    console.error('Error creating temporary file:', error);
+    return null;
+  }
+});
+
 ipcMain.handle('read-file', async (event, filePath) => {
   try {
     const content = fs.readFileSync(filePath, 'utf8');
@@ -235,6 +281,16 @@ ipcMain.handle('read-file', async (event, filePath) => {
   } catch (err) {
     console.error('Error reading file:', err);
     return { error: 'Failed to read file' };
+  }
+});
+
+ipcMain.handle('check-file-exists', async (event, filePath) => {
+  try {
+    const exists = fs.existsSync(filePath);
+    return { exists };
+  } catch (err) {
+    console.error('Error checking file existence:', err);
+    return { exists: false };
   }
 });
 
