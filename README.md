@@ -1,3 +1,8 @@
+<img width="1202" height="804" alt="image" src="https://github.com/user-attachments/assets/534602d0-8a1f-4985-9e71-cdaa6fdac6c0" />
+<img width="1200" height="796" alt="image" src="https://github.com/user-attachments/assets/44c5fee6-78c2-4792-82c2-da661e3430aa" />
+<img width="1200" height="798" alt="image" src="https://github.com/user-attachments/assets/dabd3865-1ec3-4b3e-9b99-4cce7ed71858" />
+
+
 # MD Reader
 
 A modern Markdown reader with tabs support, built with Electron.
