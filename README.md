@@ -74,3 +74,24 @@ To create a release package:
 npm run build
 node package-release.js
 ```
+
+### Building for Release (Windows)
+
+To build a release version with proper signing (to avoid Windows Defender warnings):
+
+```powershell
+# Without code signing
+.\build-release.ps1
+
+# With code signing (if you have a certificate)
+.\build-release.ps1 -CertificateFile "path\to\certificate.pfx" -CertificatePassword "certificate_password"
+```
+
+The release package will be created in the `dist` directory as both an installer and a ZIP file.
+
+## Code Signing
+
+To avoid Windows Defender warnings, it's recommended to sign your application with a code signing certificate. 
+If you have a certificate file (.pfx), you can pass it to the build script as shown above.
+
+For testing purposes, unsigned applications will work but may trigger security warnings.

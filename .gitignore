@@ -8,19 +8,7 @@
 
 # Build outputs
 /build
-
-# Distribution directories (exclude most contents but allow final builds)
-/dist/*
-!/dist/*.exe
-!/dist/*.zip
-!/dist/release/
-!/dist/installer/
-
-# Specific exclusions for dist subdirectories
-/dist/installer/*
-!/dist/installer/*.exe
-!/dist/installer/*.blockmap
-!/dist/installer/*.yml
+/dist
 
 # Logs
 logs
@@ -55,6 +43,8 @@ Thumbs.db
 # npm
 npm-debug.log*
 .npm
+package-lock.json
+yarn.lock
 
 # Debugging
 npm-debug.log*
@@ -89,6 +79,10 @@ linux-unpacked/
 mac-unpacked/
 builder-debug.yml
 builder-effective-config.yaml
+latest.yml
+
+# Documentation files that can be regenerated
+docs/*.md
 
 # Refactoring and documentation files
 REFACTOR-SUMMARY.md

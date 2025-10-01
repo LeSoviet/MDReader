@@ -5,11 +5,17 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-packager . MDReader --platform=win32 --arch=x64 --out=dist --overwrite --asar --asar.unpackDir=node_modules/monaco-editor --app-version=1.0.0",
-    "build-installer": "node build-windows-installer.js"
+    "build-electron": "electron-builder",
+    "build-installer": "electron-builder --windows",
+    "release": "npm run build && npm run build-installer"
   },
   "build": {
     "appId": "com.example.mdreader",
     "productName": "MD Reader",
+    "copyright": "Copyright © 2025 MD Reader Team",
+    "directories": {
+      "output": "dist/installer"
+    },
     "asarUnpack": [
       "node_modules/monaco-editor/**"
     ],
@@ -21,7 +27,9 @@
             "x64"
           ]
         }
-      ]
+      ],
+      "publisherName": "MD Reader Team",
+      "verifyUpdateCodeSignature": true
     },
     "nsis": {
       "oneClick": false,
@@ -29,7 +37,9 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "MD Reader"
+      "shortcutName": "MD Reader",
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "deleteAppDataOnUninstall": false
     },
     "fileAssociations": [
       {
@@ -40,10 +50,27 @@
       }
     ]
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": [
+    "markdown",
+    "reader",
+    "editor",
+    "desktop",
+    "electron"
+  ],
+  "author": {
+    "name": "MD Reader Team",
+    "email": "support@mdreader.example.com"
+  },
+  "license": "MIT",
+  "description": "A modern Markdown reader with tabs support",
+  "homepage": "https://github.com/example/mdreader",
+  "bugs": {
+    "url": "https://github.com/example/mdreader/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/example/mdreader.git"
+  },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.1",
     "marked": "^16.3.0",
