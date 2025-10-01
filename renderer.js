@@ -402,6 +402,7 @@ function switchToTab(tabId) {
     
     // Update UI
     updateWindowTitle();
+    updateWordCount();
     updateStatusBar();
     updatePreview();
   } catch (error) {
@@ -582,8 +583,15 @@ function initializeEditor() {
         wordWrap: 'on'
       });
 
-      // Initial preview render
+      // Initial preview render - force it even if empty
+      // Use multiple timeouts to ensure it renders
       updatePreview();
+      setTimeout(() => {
+        updatePreview();
+      }, 50);
+      setTimeout(() => {
+        updatePreview();
+      }, 200);
 
       // Listen for changes in the editor
       editor.onDidChangeModelContent(() => {
@@ -742,7 +750,27 @@ function updatePreview() {
     const content = editor.getValue();
     // Handle empty content
     if (!content || content.trim() === '') {
-      preview.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">No content to preview. Start typing in the editor...</p>';
+      const textColor = isDarkTheme ? '#888' : '#666';
+      const iconColor = isDarkTheme ? '#666' : '#999';
+      preview.innerHTML = `
+        <div style="
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100%;
+          min-height: 200px;
+          color: ${textColor};
+          font-size: 16px;
+          text-align: center;
+          padding: 40px;
+        ">
+          <div>
+            <i class="fas fa-file-alt" style="font-size: 48px; margin-bottom: 20px; color: ${iconColor};"></i>
+            <p style="margin: 0; font-weight: 500;">No content to preview</p>
+            <p style="margin: 10px 0 0 0; font-size: 14px;">Start typing in the editor...</p>
+          </div>
+        </div>
+      `;
       return;
     }
     
@@ -806,7 +834,7 @@ async function openFile() {
         }
       }
       
-      // Update active tab
+      // Update active tab data
       if (activeTabId) {
         const activeTab = tabs.find(tab => tab.id === activeTabId);
         if (activeTab) {
@@ -815,7 +843,6 @@ async function openFile() {
           activeTab.content = result.content;
           activeTab.isModified = false;
           
-          // Update tab title
           const tabElement = document.querySelector(`.tab[data-tab-id="${activeTabId}"] .tab-title`);
           if (tabElement) {
             tabElement.textContent = activeTab.fileName;
@@ -827,12 +854,14 @@ async function openFile() {
       currentFileName = result.filePath ? result.filePath.split('\\').pop() : 'Untitled';
       isModified = false;
       
-      // Feature 3: Add to recent files
       addToRecentFiles(result.filePath);
       
-      updateWindowTitle();
-      updateStatusBar();
+      // Refresh UI and preview explicitly because programmatic changes do not trigger content listener
+      updateActiveTabContent();
       updateWordCount();
+      updateStatusBar();
+      updatePreview();
+      updateWindowTitle();
     }
   } catch (error) {
     console.error('Error opening file:', error);
@@ -1115,51 +1144,73 @@ document.addEventListener('keydown', async (e) => {
 let dragCounter = 0;
 
 function initializeDragDrop() {
-  document.addEventListener('dragenter', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter++;
-    if (dragCounter === 1) {
+  const hasFiles = (event) => {
+    const types = Array.from(event.dataTransfer?.types || []);
+    return types.includes('Files');
+  };
+
+  const showOverlay = () => {
+    if (!document.body.classList.contains('drag-over')) {
       document.body.classList.add('drag-over');
     }
+  };
+
+  const hideOverlay = () => {
+    dragCounter = 0;
+    document.body.classList.remove('drag-over');
+  };
+
+  document.addEventListener('dragenter', (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    dragCounter++;
+    showOverlay();
   });
 
-  document.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  document.addEventListener('dragover', (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = 'copy';
   });
 
-  document.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter--;
+  document.addEventListener('dragleave', (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    dragCounter = Math.max(0, dragCounter - 1);
     if (dragCounter === 0) {
-      document.body.classList.remove('drag-over');
+      hideOverlay();
     }
   });
 
-  document.addEventListener('drop', async (e) => {
-    try {
-      e.preventDefault();
-      e.stopPropagation();
-      dragCounter = 0;
-      document.body.classList.remove('drag-over');
-      
-      const files = e.dataTransfer.files;
-      if (files.length > 0) {
-        for (let i = 0; i < files.length; i++) {
-          const filePath = files[i].path;
-          const extension = path.extname(filePath || '').toLowerCase();
-          if (extension === '.md' || extension === '.markdown' || extension === '.txt') {
-            const fileStats = await fs.promises.stat(filePath);
-            if (fileStats.isFile()) {
-              await openFilePath(filePath);
-            }
-          }
-        }
+  document.addEventListener('drop', async (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    hideOverlay();
+
+    const files = Array.from(event.dataTransfer.files || []);
+    if (files.length === 0) {
+      return;
+    }
+
+    const supportedExtensions = new Set(['.md', '.markdown', '.txt']);
+    for (const file of files) {
+      const filePath = file.path;
+      if (!filePath) continue;
+      const extension = path.extname(filePath).toLowerCase();
+      if (!supportedExtensions.has(extension)) {
+        console.warn('Unsupported file dropped:', filePath);
+        continue;
       }
-    } catch (error) {
-      console.error('Error handling drop:', error);
+
+      try {
+        await openFilePath(filePath);
+      } catch (error) {
+        console.error('Error opening dropped file:', error);
+      }
     }
   });
 }
