@@ -108,6 +108,17 @@ body.dark-theme .title-bar-button:hover {
   flex-shrink: 0; /* Prevent toolbar from shrinking */
 }
 
+.toolbar-separator {
+  width: 1px;
+  height: 24px;
+  background-color: #ddd;
+  margin: 0 5px;
+}
+
+body.dark-theme .toolbar-separator {
+  background-color: #3c3c3c;
+}
+
 body.dark-theme .toolbar {
   background-color: #2d2d2d;
   border-bottom: 1px solid #3c3c3c;
@@ -522,6 +533,36 @@ body.dark-theme #preview tr:nth-child(2n) {
 body.dark-theme .status-bar {
   background-color: #005a9e;
   border-top: 1px solid #004578;
+}
+
+/* Drag and drop visual feedback */
+body.drag-over {
+  position: relative;
+}
+
+body.drag-over::after {
+  content: 'Drop files here to open';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 122, 204, 0.1);
+  border: 3px dashed #007acc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: bold;
+  color: #007acc;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+body.dark-theme.drag-over::after {
+  background-color: rgba(0, 122, 204, 0.2);
+  border-color: #1177bb;
+  color: #1177bb;
 }
 
 /* Prism.js theme overrides to match VS Code */

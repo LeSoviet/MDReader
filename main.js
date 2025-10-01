@@ -278,3 +278,25 @@ ipcMain.handle('set-theme', async (event, theme) => {
     }
   }
 });
+
+// Handle HTML export
+ipcMain.handle('export-html', async (event, htmlContent, fileName) => {
+  const result = await dialog.showSaveDialog({
+    defaultPath: fileName.replace(/\.md$/, '.html'),
+    filters: [
+      { name: 'HTML Files', extensions: ['html'] },
+      { name: 'All Files', extensions: ['*'] }
+    ]
+  });
+  
+  if (!result.canceled && result.filePath) {
+    try {
+      fs.writeFileSync(result.filePath, htmlContent, 'utf8');
+      return { success: true, filePath: result.filePath };
+    } catch (err) {
+      console.error('Error exporting HTML:', err);
+      return { error: 'Failed to export HTML' };
+    }
+  }
+  return { canceled: true };
+});

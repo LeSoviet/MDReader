@@ -50,146 +50,6 @@ let autoSaveTimer = null;
 let lastSavedContent = '';
 let lastSavedFilePath = null;
 
-// Recent files (Feature 3)
-let recentFiles = [];
-
-// Word count (Feature 1)
-let wordCount = 0;
-let charCount = 0;
-
-// Feature 3: Load recent files from localStorage
-function loadRecentFiles() {
-  try {
-    const stored = localStorage.getItem('recentFiles');
-    return stored ? JSON.parse(stored) : [];
-  } catch (error) {
-    console.error('Error loading recent files:', error);
-    return [];
-  }
-}
-
-// Feature 3: Save recent files to localStorage
-function saveRecentFiles() {
-  try {
-    localStorage.setItem('recentFiles', JSON.stringify(recentFiles.slice(0, 10)));
-  } catch (error) {
-    console.error('Error saving recent files:', error);
-  }
-}
-
-// Feature 3: Add file to recent files
-function addToRecentFiles(filePath) {
-  if (!filePath) return;
-  
-  // Remove if already exists
-  recentFiles = recentFiles.filter(f => f !== filePath);
-  // Add to beginning
-  recentFiles.unshift(filePath);
-  // Keep only last 10
-  recentFiles = recentFiles.slice(0, 10);
-  saveRecentFiles();
-  updateRecentFilesMenu();
-}
-
-// Feature 3: Update recent files menu
-function updateRecentFilesMenu() {
-  // This will be called by main process
-  ipcRenderer.send('update-recent-files', recentFiles);
-}
-
-// Feature 1: Update word and character count
-function updateWordCount() {
-  if (!editor) return;
-  
-  const content = editor.getValue();
-  charCount = content.length;
-  
-  // Count words (split by whitespace and filter empty strings)
-  const words = content.trim().split(/\s+/).filter(word => word.length > 0);
-  wordCount = content.trim() === '' ? 0 : words.length;
-  
-  updateStatusBar();
-}
-
-// Feature 2: Export to HTML
-async function exportToHTML() {
-  try {
-    if (!editor) {
-      alert('Editor not initialized.');
-      return;
-    }
-    
-    const content = editor.getValue();
-    const html = marked.parse(content);
-    
-    // Create full HTML document
-    const fullHTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${currentFileName}</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            line-height: 1.6;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            color: #333;
-        }
-        code {
-            background-color: #f4f4f4;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: 'Consolas', 'Courier New', monospace;
-        }
-        pre {
-            background-color: #f4f4f4;
-            padding: 16px;
-            border-radius: 6px;
-            overflow-x: auto;
-        }
-        pre code {
-            background: none;
-            padding: 0;
-        }
-        blockquote {
-            border-left: 4px solid #007acc;
-            padding-left: 16px;
-            color: #666;
-        }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f4f4f4;
-        }
-    </style>
-</head>
-<body>
-${html}
-</body>
-</html>`;
-    
-    const result = await ipcRenderer.invoke('export-html', fullHTML, currentFileName);
-    if (result.error) {
-      alert('Failed to export HTML: ' + result.error);
-    } else if (!result.canceled) {
-      alert('HTML exported successfully!');
-    }
-  } catch (error) {
-    console.error('Error exporting to HTML:', error);
-    alert('Failed to export HTML: ' + error.message);
-  }
-}
-
 function resolveMonacoResourceRoot() {
   const candidates = [];
 
@@ -227,9 +87,6 @@ window.addEventListener('unhandledrejection', function(e) {
 // Wait for the DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', () => {
   
-  // Load recent files
-  recentFiles = loadRecentFiles();
-  
   // Initialize window controls
   initializeWindowControls();
   
@@ -238,9 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Initialize UI elements even if Monaco fails
   initializeUIElements();
-  
-  // Initialize drag and drop
-  initializeDragDrop();
   
   // Try to load Monaco editor
   loadMonacoEditor();
@@ -590,7 +444,6 @@ function initializeEditor() {
         if (!isApplyingEditorContent) {
           isModified = true;
           updateActiveTabContent();
-          updateWordCount(); // Feature 1: Update word count
           updateStatusBar();
           updatePreview();
           updateWindowTitle();
@@ -627,7 +480,6 @@ function initializeUIElements() {
     const openBtn = document.getElementById('open-btn');
     const saveBtn = document.getElementById('save-btn');
     const saveAsBtn = document.getElementById('save-as-btn');
-    const exportHtmlBtn = document.getElementById('export-html-btn');
     const themeToggle = document.getElementById('theme-toggle');
     const viewModeToggle = document.getElementById('view-mode-toggle');
     const resizer = document.getElementById('resizer');
@@ -658,14 +510,6 @@ function initializeUIElements() {
       });
     } else {
       console.warn('Save As button not found');
-    }
-
-    if (exportHtmlBtn) {
-      exportHtmlBtn.addEventListener('click', async () => {
-        exportToHTML();
-      });
-    } else {
-      console.warn('Export HTML button not found');
     }
 
     if (themeToggle) {
@@ -826,13 +670,8 @@ async function openFile() {
       currentFilePath = result.filePath;
       currentFileName = result.filePath ? result.filePath.split('\\').pop() : 'Untitled';
       isModified = false;
-      
-      // Feature 3: Add to recent files
-      addToRecentFiles(result.filePath);
-      
       updateWindowTitle();
       updateStatusBar();
-      updateWordCount();
     }
   } catch (error) {
     console.error('Error opening file:', error);
@@ -853,8 +692,6 @@ async function openFilePath(filePath) {
     const result = await ipcRenderer.invoke('read-file', normalizedPath);
     if (!result.error) {
       createNewTab(normalizedPath, result.content);
-      // Feature 3: Add to recent files
-      addToRecentFiles(normalizedPath);
     } else {
       console.error('Error reading file:', result.error);
       alert('Failed to read file: ' + result.error);
@@ -1009,8 +846,7 @@ function updateStatusBar() {
       const themeText = isDarkTheme ? 'Dark' : 'Light';
       const modifiedText = isModified ? 'Modified' : 'Saved';
       const viewModeText = viewMode === 'split' ? 'Split' : viewMode === 'editor' ? 'Editor Only' : 'Preview Only';
-      // Feature 1: Add word and character count
-      statusBar.textContent = `${currentFileName} - Line ${line}, Col ${column} - Words: ${wordCount} - Chars: ${charCount} - ${themeText} - ${modifiedText} - ${viewModeText}`;
+      statusBar.textContent = `${currentFileName} - Line ${line}, Column ${column} - ${themeText} - ${modifiedText} - ${viewModeText}`;
     }
   } catch (error) {
     console.error('Error updating status bar:', error);
@@ -1114,55 +950,44 @@ document.addEventListener('keydown', async (e) => {
 // Drag and drop functionality
 let dragCounter = 0;
 
-function initializeDragDrop() {
-  document.addEventListener('dragenter', (e) => {
+document.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+});
+
+document.addEventListener('drop', async (e) => {
+  try {
     e.preventDefault();
     e.stopPropagation();
-    dragCounter++;
-    if (dragCounter === 1) {
-      document.body.classList.add('drag-over');
-    }
-  });
-
-  document.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-  });
-
-  document.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter--;
-    if (dragCounter === 0) {
-      document.body.classList.remove('drag-over');
-    }
-  });
-
-  document.addEventListener('drop', async (e) => {
-    try {
-      e.preventDefault();
-      e.stopPropagation();
-      dragCounter = 0;
-      document.body.classList.remove('drag-over');
-      
-      const files = e.dataTransfer.files;
-      if (files.length > 0) {
-        for (let i = 0; i < files.length; i++) {
-          const filePath = files[i].path;
-          const extension = path.extname(filePath || '').toLowerCase();
-          if (extension === '.md' || extension === '.markdown' || extension === '.txt') {
-            const fileStats = await fs.promises.stat(filePath);
-            if (fileStats.isFile()) {
-              await openFilePath(filePath);
-            }
+    dragCounter = 0;
+    document.body.style.opacity = '1';
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        const filePath = files[i].path;
+        const extension = path.extname(filePath || '').toLowerCase();
+        if (extension === '.md' || extension === '.markdown') {
+          const fileStats = await fs.promises.stat(filePath);
+          if (fileStats.isFile()) {
+            await openFilePath(filePath);
           }
         }
       }
-    } catch (error) {
-      console.error('Error handling drop:', error);
     }
-  });
-}
+  } catch (error) {
+    console.error('Error handling drop:', error);
+  }
+});
+
+document.addEventListener('dragleave', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  dragCounter--;
+  if (dragCounter === 0) {
+    document.body.style.opacity = '1';
+  }
+});
 
 // Autosave functionality
 function resetAutoSaveTimer() {

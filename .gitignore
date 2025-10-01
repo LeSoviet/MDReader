@@ -63,3 +63,6 @@ Thumbs.db
 *.AppImage
 *.deb
 *.rpm
+REFACTOR-SUMMARY.md
+NEW-FEATURES.md
+CHANGELOG-FIXES.md
