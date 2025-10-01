@@ -25,14 +25,14 @@ Write-Host "Building application with electron-builder..." -ForegroundColor Yell
 npm run build-electron
 
 # Check if build was successful
-if (Test-Path "dist\installer\MD Reader-Setup-1.0.0.exe") {
+if (Test-Path "dist\installer\MD Reader-Setup-1.2.0.exe") {
     Write-Host "Build successful!" -ForegroundColor Green
     
     # Create release directory
     New-Item -ItemType Directory -Path "dist\release" -Force | Out-Null
     
     # Copy installer to release directory
-    Copy-Item "dist\installer\MD Reader-Setup-1.0.0.exe" "dist\release\"
+    Copy-Item "dist\installer\MD Reader-Setup-1.2.0.exe" "dist\release\"
     
     # Copy other important files
     Copy-Item "README.md" "dist\release\" -ErrorAction SilentlyContinue
@@ -45,15 +45,15 @@ if (Test-Path "dist\installer\MD Reader-Setup-1.0.0.exe") {
     $7zPath = "C:\Program Files\7-Zip\7z.exe"
     if (Test-Path $7zPath) {
         Write-Host "Using 7-Zip to create ZIP file..." -ForegroundColor Yellow
-        & $7zPath a "dist\MDReader-1.0.0.zip" "dist\release\*"
+        & $7zPath a "dist\MDReader-1.2.0.zip" "dist\release\*"
     } else {
         # Use PowerShell's built-in compression
         Write-Host "Using PowerShell compression..." -ForegroundColor Yellow
-        Compress-Archive -Path "dist\release\*" -DestinationPath "dist\MDReader-1.0.0.zip" -Force
+        Compress-Archive -Path "dist\release\*" -DestinationPath "dist\MDReader-1.2.0.zip" -Force
     }
     
-    Write-Host "Release package created: dist\MDReader-1.0.0.zip" -ForegroundColor Green
-    Write-Host "Installer location: dist\release\MD Reader-Setup-1.0.0.exe" -ForegroundColor Cyan
+    Write-Host "Release package created: dist\MDReader-1.2.0.zip" -ForegroundColor Green
+    Write-Host "Installer location: dist\release\MD Reader-Setup-1.2.0.exe" -ForegroundColor Cyan
     Write-Host "You can now distribute these files to users." -ForegroundColor Cyan
 } else {
     Write-Host "Build failed!" -ForegroundColor Red

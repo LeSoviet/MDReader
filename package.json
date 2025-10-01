@@ -1,10 +1,10 @@
 {
   "name": "mdreader",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-packager . MDReader --platform=win32 --arch=x64 --out=dist --overwrite --asar --asar.unpackDir=node_modules/monaco-editor --app-version=1.0.0",
+    "build": "electron-packager . MDReader --platform=win32 --arch=x64 --out=dist --overwrite --asar --asar.unpackDir=node_modules/monaco-editor --app-version=1.2.0",
     "build-electron": "electron-builder",
     "build-installer": "electron-builder --windows",
     "release": "npm run build && npm run build-installer"

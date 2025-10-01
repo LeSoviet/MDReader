@@ -22,7 +22,7 @@ A modern Markdown reader with tabs support, built with Electron.
 
 ### Using the Release Package (Recommended)
 
-1. Download `dist/MDReader-1.0.0.zip`
+1. Download `dist/MDReader-1.2.0.zip`
 2. Extract the ZIP file to any location on your computer
 3. Run `Start MD Reader.bat` to launch the application
 4. (Optional) Run `register-file-association.bat` to associate .md files with MD Reader

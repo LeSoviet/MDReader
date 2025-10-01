@@ -1,5 +1,25 @@
 # MD Reader Release Notes
 
+## Version 1.2.0
+
+### New Features
+- Ready-to-write "Untitled" tab on startup
+- Improved tab management with better positioning of the "+" button
+- Enhanced dark theme with more comfortable colors for extended reading
+- Persistent theme settings that remember user preferences between sessions
+- Empty application state handling with clear user guidance
+
+### Bug Fixes
+- Fixed issue where the first .md file wouldn't appear in a tab when opened
+- Resolved tab close button visibility issues with long filenames
+- Fixed document display issues where content wouldn't show on app startup
+- Improved file opening reliability with better editor initialization timing
+
+### Performance Improvements
+- Optimized tab creation and switching performance
+- Enhanced preview rendering efficiency
+- Improved memory management for better application stability
+
 ## Version 1.0.0
 
 ### Features
@@ -48,12 +68,12 @@ To build a release version:
 ```
 
 ### Distribution Files
-- `dist\MDReader-1.0.0.zip` - Portable ZIP package with all necessary files
-- `dist\release\MD Reader-Setup-1.0.0.exe` - Windows installer
+- `dist\MDReader-1.2.0.zip` - Portable ZIP package with all necessary files
+- `dist\release\MD Reader-Setup-1.2.0.exe` - Windows installer
 
 ### Installation
-1. For installer: Run `MD Reader-Setup-1.0.0.exe` and follow the installation wizard
-2. For portable: Extract `MDReader-1.0.0.zip` to any location and run `Start MD Reader.bat`
+1. For installer: Run `MD Reader-Setup-1.2.0.exe` and follow the installation wizard
+2. For portable: Extract `MDReader-1.2.0.zip` to any location and run `Start MD Reader.bat`
 
 ### File Associations
 To associate .md files with MD Reader:
