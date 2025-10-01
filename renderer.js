@@ -931,21 +931,18 @@ document.addEventListener('drop', async (e) => {
     if (files.length > 0) {
       for (let i = 0; i < files.length; i++) {
         const filePath = files[i].path;
-        if (filePath.endsWith('.md') || filePath.endsWith('.markdown')) {
-          await openFilePath(filePath);
+        const extension = path.extname(filePath || '').toLowerCase();
+        if (extension === '.md' || extension === '.markdown') {
+          const fileStats = await fs.promises.stat(filePath);
+          if (fileStats.isFile()) {
+            await openFilePath(filePath);
+          }
         }
       }
     }
   } catch (error) {
     console.error('Error handling drop:', error);
   }
-});
-
-document.addEventListener('dragenter', (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  dragCounter++;
-  document.body.style.opacity = '0.8';
 });
 
 document.addEventListener('dragleave', (e) => {
