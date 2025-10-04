@@ -67,6 +67,9 @@ const createWindow = function() {
       nodeIntegration: true,
       contextIsolation: false,
       enableRemoteModule: true,
+      // Enable clipboard access
+      webSecurity: false,
+      allowRunningInsecureContent: true
     },
     icon: path.join(__dirname, 'assets', 'icon.png'), // Add icon support
     // Use custom title bar

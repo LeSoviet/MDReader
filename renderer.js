@@ -222,6 +222,9 @@ function loadThemePreference() {
     // If no saved theme, default to dark theme
     const themeToUse = savedTheme || 'dark';
     
+    // Remove preload class first
+    document.documentElement.classList.remove('dark-theme-preload');
+    
     if (themeToUse) {
       // Apply saved theme
       const shouldUseDarkTheme = themeToUse === 'dark';
@@ -760,7 +763,18 @@ function initializeEditor() {
         fontSize: 14,
         lineNumbers: 'on',
         scrollBeyondLastLine: false,
-        wordWrap: 'on'
+        wordWrap: 'on',
+        // Enable clipboard operations
+        contextmenu: true,
+        selectOnLineNumbers: true,
+        roundedSelection: false,
+        readOnly: false,
+        cursorStyle: 'line',
+        // Explicitly enable clipboard
+        domReadOnly: false,
+        // Enable all clipboard actions
+        links: true,
+        mouseWheelZoom: true
       });
 
       // Initial preview render with delays to ensure proper rendering
@@ -789,6 +803,67 @@ function initializeEditor() {
             resetAutoSaveTimer();
           }
         }
+      });
+
+      // Add keyboard shortcuts for clipboard operations using modern clipboard API
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC, async function() {
+        const selection = editor.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = editor.getModel().getValueInRange(selection);
+          try {
+            await navigator.clipboard.writeText(selectedText);
+          } catch (err) {
+            console.error('Failed to copy text: ', err);
+            // Fallback to Monaco's built-in copy
+            editor.getAction('editor.action.clipboardCopyAction').run();
+          }
+        }
+      });
+
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, async function() {
+        try {
+          const text = await navigator.clipboard.readText();
+          const selection = editor.getSelection();
+          const range = new monaco.Range(
+            selection.startLineNumber,
+            selection.startColumn,
+            selection.endLineNumber,
+            selection.endColumn
+          );
+          const op = { range: range, text: text, forceMoveMarkers: true };
+          editor.executeEdits("paste", [op]);
+        } catch (err) {
+          console.error('Failed to paste text: ', err);
+          // Fallback to Monaco's built-in paste
+          editor.getAction('editor.action.clipboardPasteAction').run();
+        }
+      });
+
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyX, async function() {
+        const selection = editor.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = editor.getModel().getValueInRange(selection);
+          try {
+            await navigator.clipboard.writeText(selectedText);
+            const range = new monaco.Range(
+              selection.startLineNumber,
+              selection.startColumn,
+              selection.endLineNumber,
+              selection.endColumn
+            );
+            const op = { range: range, text: '', forceMoveMarkers: true };
+            editor.executeEdits("cut", [op]);
+          } catch (err) {
+            console.error('Failed to cut text: ', err);
+            // Fallback to Monaco's built-in cut
+            editor.getAction('editor.action.clipboardCutAction').run();
+          }
+        }
+      });
+
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyA, function() {
+        // Select all command
+        editor.getAction('editor.action.selectAll').run();
       });
       
       // Update UI to reflect empty state
