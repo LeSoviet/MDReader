@@ -1,37 +1,44 @@
 # Dependencies
-/node_modules
-/.pnp
+node_modules/
+.pnp
 .pnp.js
 
-# Testing
-/coverage
-
-# Build outputs
-/build
-/dist
+# Build outputs and distribution files
+build/
+dist/
+release/
+out/
 
 # Logs
 logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
 
 # OS generated files
 Thumbs.db
+ehthumbs.db
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
-ehthumbs.db
-Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
 
 # IDE and editor files
-/.vscode
-/.idea
+.vscode/
+.idea/
 *.swp
 *.swo
 *~
 *.sublime-project
 *.sublime-workspace
+.project
+.classpath
+.settings/
 
 # Environment files
 .env
@@ -40,31 +47,27 @@ Thumbs.db
 .env.test.local
 .env.production.local
 
-# npm
-npm-debug.log*
-.npm
+# Package managers
 package-lock.json
 yarn.lock
+.npm
+.yarn/
+.pnpm-store/
 
-# Debugging
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage directory used by Jest
+# Testing
 coverage/
+.nyc_output/
+*.lcov
 
-# Temporary folders
+# Temporary files
 tmp/
 temp/
+*.tmp
+*.temp
+*.bak
+*.backup
 
-# Electron specific build artifacts
+# Electron build artifacts and installers
 *.exe
 *.msi
 *.dmg
@@ -80,66 +83,45 @@ mac-unpacked/
 builder-debug.yml
 builder-effective-config.yaml
 latest.yml
-
-# Documentation files that can be regenerated
-docs/*.md
-
-# Refactoring and documentation files
-REFACTOR-SUMMARY.md
-NEW-FEATURES.md
-CHANGELOG-FIXES.md
-
-# System files
-desktop.ini
-
-# Additional files to exclude
-# Build artifacts and temporary files
-*.tmp
-*.temp
-*.bak
-*.backup
-
-# IDE specific files
-*.vs
-*.vscode
-*.idea/
-
-# OS specific files
-*.lnk
-*.url
-*.exe.stackdump
-
-# Log files
-*.log.*
+*.blockmap
 
 # Cache files
 .cache/
 *.cache
+.eslintcache
+.parcel-cache/
 
-# Distribution files (we'll commit specific versions when needed)
-dist/
-release/
-
-# Node.js modules (already included but being explicit)
-node_modules/
-
-# Monaco editor unpacked files (large files)
-/node_modules/monaco-editor/min/vs/editor/editor.main.js.map
-/node_modules/monaco-editor/min/vs/loader.js.map
-/node_modules/monaco-editor/min/vs/**/*worker*.js.map
-
-# Package lock files
-package-lock.json
-yarn.lock
-
-# Temporary build files
-*.tmp.*
-*.temp.*
-
-# System restore points
+# System files
+*.lnk
+*.url
+*.exe.stackdump
+*.pid
+*.seed
+*.pid.lock
 *.rbf
 *.sav
 
-# Thumbnails cache
-Thumbs.db
-ehthumbs_vista.db
+# Build and development scripts (private)
+build-release.ps1
+*.ps1
+*.bat
+*.sh
+
+# Documentation files (private development docs)
+*.md
+!README.md
+!LICENSE.md
+!CHANGELOG.md
+
+# Certificate and signing files
+*.p12
+*.pfx
+*.pem
+*.key
+*.crt
+*.cer
+
+# Configuration files with sensitive data
+config.json
+settings.json
+secrets.json

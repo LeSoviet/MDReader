@@ -1,63 +1,95 @@
-# PowerShell script to build and package MD Reader for release
+# Enhanced build script with code signing support
 param(
     [string]$CertificateFile = "",
-    [string]$CertificatePassword = ""
+    [string]$CertificatePassword = "",
+    [string]$TimestampUrl = "http://timestamp.sectigo.com",
+    [switch]$SkipSigning = $false
 )
 
-Write-Host "Building MD Reader for release..." -ForegroundColor Green
+Write-Host "MD Reader - Enhanced Build Script" -ForegroundColor Green
+Write-Host "=================================" -ForegroundColor Green
 
-# Set environment variables for signing if provided
-if ($CertificateFile -ne "" -and $CertificatePassword -ne "") {
-    $env:WINDOWS_CERTIFICATE_FILE = $CertificateFile
-    $env:WINDOWS_CERTIFICATE_PASSWORD = $CertificatePassword
-    Write-Host "Certificate information set for signing" -ForegroundColor Yellow
+# Check if certificate parameters are provided
+$shouldSign = $false
+if (-not $SkipSigning) {
+    if ($CertificateFile -and $CertificatePassword) {
+        if (Test-Path $CertificateFile) {
+            $shouldSign = $true
+            Write-Host "Code signing enabled with certificate: $CertificateFile" -ForegroundColor Yellow
+        } else {
+            Write-Host "Certificate file not found: $CertificateFile" -ForegroundColor Red
+            Write-Host "Building without code signing..." -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "No certificate provided. Building without code signing..." -ForegroundColor Yellow
+        Write-Host "To enable code signing, use: .\build-release.ps1 -CertificateFile 'path\to\cert.pfx' -CertificatePassword 'password'" -ForegroundColor Cyan
+    }
 }
 
 # Clean previous builds
-Write-Host "Cleaning previous builds..." -ForegroundColor Yellow
-Remove-Item -Recurse -Force "dist" -ErrorAction SilentlyContinue | Out-Null
-
-# Create dist directory
-New-Item -ItemType Directory -Path "dist" -Force | Out-Null
-
-# Build the application using electron-builder
-Write-Host "Building application with electron-builder..." -ForegroundColor Yellow
-npm run build-electron
-
-# Check if build was successful
-if (Test-Path "dist\installer\MD Reader-Setup-1.2.0.exe") {
-    Write-Host "Build successful!" -ForegroundColor Green
-    
-    # Create release directory
-    New-Item -ItemType Directory -Path "dist\release" -Force | Out-Null
-    
-    # Copy installer to release directory
-    Copy-Item "dist\installer\MD Reader-Setup-1.2.0.exe" "dist\release\"
-    
-    # Copy other important files
-    Copy-Item "README.md" "dist\release\" -ErrorAction SilentlyContinue
-    Copy-Item "LICENSE" "dist\release\" -ErrorAction SilentlyContinue
-    
-    # Create ZIP package
-    Write-Host "Creating ZIP package..." -ForegroundColor Yellow
-    
-    # Check if 7-Zip is available
-    $7zPath = "C:\Program Files\7-Zip\7z.exe"
-    if (Test-Path $7zPath) {
-        Write-Host "Using 7-Zip to create ZIP file..." -ForegroundColor Yellow
-        & $7zPath a "dist\MDReader-1.2.0.zip" "dist\release\*"
-    } else {
-        # Use PowerShell's built-in compression
-        Write-Host "Using PowerShell compression..." -ForegroundColor Yellow
-        Compress-Archive -Path "dist\release\*" -DestinationPath "dist\MDReader-1.2.0.zip" -Force
-    }
-    
-    Write-Host "Release package created: dist\MDReader-1.2.0.zip" -ForegroundColor Green
-    Write-Host "Installer location: dist\release\MD Reader-Setup-1.2.0.exe" -ForegroundColor Cyan
-    Write-Host "You can now distribute these files to users." -ForegroundColor Cyan
-} else {
-    Write-Host "Build failed!" -ForegroundColor Red
-    exit 1
+Write-Host "`nCleaning previous builds..." -ForegroundColor Cyan
+if (Test-Path "dist") {
+    Remove-Item -Recurse -Force "dist"
 }
 
-Write-Host "Release build complete!" -ForegroundColor Green
+# Install dependencies
+Write-Host "`nInstalling dependencies..." -ForegroundColor Cyan
+npm install
+
+# Build the application
+Write-Host "`nBuilding application..." -ForegroundColor Cyan
+npx electron-packager . MDReader --platform=win32 --arch=x64 --out=dist --overwrite
+
+# Sign the executable if certificate is provided
+if ($shouldSign) {
+    Write-Host "`nSigning executable..." -ForegroundColor Cyan
+    $exePath = "dist\MDReader-win32-x64\MDReader.exe"
+    
+    if (Test-Path $exePath) {
+        try {
+            # Use signtool to sign the executable
+            $signParams = @(
+                "sign"
+                "/f", $CertificateFile
+                "/p", $CertificatePassword
+                "/t", $TimestampUrl
+                "/fd", "SHA256"
+                "/v"
+                $exePath
+            )
+            
+            & signtool.exe @signParams
+            
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "Executable signed successfully!" -ForegroundColor Green
+            } else {
+                Write-Host "Failed to sign executable. Error code: $LASTEXITCODE" -ForegroundColor Red
+            }
+        } catch {
+            Write-Host "Error signing executable: $($_.Exception.Message)" -ForegroundColor Red
+        }
+    } else {
+        Write-Host "Executable not found at: $exePath" -ForegroundColor Red
+    }
+}
+
+# Set environment variables for installer signing
+if ($shouldSign) {
+    $env:WINDOWS_CERTIFICATE_FILE = $CertificateFile
+    $env:WINDOWS_CERTIFICATE_PASSWORD = $CertificatePassword
+    $env:SIGNTOOL_PARAMS = "/f `"$CertificateFile`" /p `"$CertificatePassword`" /t `"$TimestampUrl`" /fd SHA256"
+}
+
+# Create installer
+Write-Host "`nCreating installer..." -ForegroundColor Cyan
+node build-windows-installer.js
+
+Write-Host "`nBuild completed!" -ForegroundColor Green
+
+if ($shouldSign) {
+    Write-Host "Application and installer have been signed with the provided certificate." -ForegroundColor Green
+} else {
+    Write-Host "Application built without code signing." -ForegroundColor Yellow
+    Write-Host "Users may see Windows Defender warnings when installing." -ForegroundColor Yellow
+    Write-Host "To avoid warnings, obtain a code signing certificate and rebuild with signing enabled." -ForegroundColor Cyan
+}

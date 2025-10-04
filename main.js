@@ -75,13 +75,15 @@ const createWindow = function() {
     // Use custom title bar
     frame: false, // Remove default frame
     titleBarStyle: 'hidden',
-    backgroundColor: '#1e1e1e' // Set initial background color to standard dark
+    backgroundColor: '#1e1e1e', // Set initial background color to standard dark
+    show: false // Hide window initially to prevent theme flashing
   });
 
   // Restore maximized state
-  if (windowSettings.isMaximized) {
-    mainWindow.maximize();
-  }
+  // Note: This is now handled after window.show() to prevent flashing
+  // if (windowSettings.isMaximized) {
+  //   mainWindow.maximize();
+  // }
 
   // Save window settings when moved or resized
   mainWindow.on('moved', saveWindowSettings);
@@ -103,6 +105,19 @@ const createWindow = function() {
 
   // and load the index.html of the app.
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
+
+  // Show window after content is loaded and theme is applied
+  mainWindow.webContents.once('did-finish-load', () => {
+    // Small delay to ensure theme is fully applied
+    setTimeout(() => {
+      mainWindow.show();
+      
+      // Restore maximized state after showing
+      if (windowSettings.isMaximized) {
+        mainWindow.maximize();
+      }
+    }, 100); // 100ms delay should be enough for theme application
+  });
 
   // Enable F12 for DevTools
   mainWindow.webContents.on('before-input-event', (event, input) => {
