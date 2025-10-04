@@ -11,11 +11,58 @@ if (require('electron-squirrel-startup')) {
 
 let mainWindow;
 
-const createWindow = function() {
-  // Create the browser window.
-  mainWindow = new BrowserWindow({
+// Window settings storage
+const settingsPath = path.join(app.getPath('userData'), 'window-settings.json');
+
+function loadWindowSettings() {
+  try {
+    if (fs.existsSync(settingsPath)) {
+      const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+      return settings;
+    }
+  } catch (error) {
+    console.error('Error loading window settings:', error);
+  }
+  
+  // Default settings
+  return {
     width: 1200,
     height: 800,
+    x: undefined,
+    y: undefined,
+    isMaximized: false
+  };
+}
+
+function saveWindowSettings() {
+  try {
+    if (mainWindow) {
+      const bounds = mainWindow.getBounds();
+      const settings = {
+        width: bounds.width,
+        height: bounds.height,
+        x: bounds.x,
+        y: bounds.y,
+        isMaximized: mainWindow.isMaximized()
+      };
+      
+      fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+    }
+  } catch (error) {
+    console.error('Error saving window settings:', error);
+  }
+}
+
+const createWindow = function() {
+  // Load window settings
+  const windowSettings = loadWindowSettings();
+  
+  // Create the browser window.
+  mainWindow = new BrowserWindow({
+    width: windowSettings.width,
+    height: windowSettings.height,
+    x: windowSettings.x,
+    y: windowSettings.y,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -27,6 +74,17 @@ const createWindow = function() {
     titleBarStyle: 'hidden',
     backgroundColor: '#1e1e1e' // Set initial background color to standard dark
   });
+
+  // Restore maximized state
+  if (windowSettings.isMaximized) {
+    mainWindow.maximize();
+  }
+
+  // Save window settings when moved or resized
+  mainWindow.on('moved', saveWindowSettings);
+  mainWindow.on('resized', saveWindowSettings);
+  mainWindow.on('maximize', saveWindowSettings);
+  mainWindow.on('unmaximize', saveWindowSettings);
 
   // Handle file drops
   mainWindow.webContents.on('will-navigate', (event, url) => {
@@ -222,7 +280,7 @@ ipcMain.handle('close-window', () => {
 // IPC handlers for file operations
 ipcMain.handle('open-file-dialog', async () => {
   const result = await dialog.showOpenDialog({
-    properties: ['openFile'],
+    properties: ['openFile', 'multiSelections'],
     filters: [
       { name: 'Markdown Files', extensions: ['md', 'markdown'] },
       { name: 'All Files', extensions: ['*'] }
@@ -231,8 +289,13 @@ ipcMain.handle('open-file-dialog', async () => {
   
   if (!result.canceled && result.filePaths.length > 0) {
     try {
-      const content = fs.readFileSync(result.filePaths[0], 'utf8');
-      return { filePath: result.filePaths[0], content };
+      // Handle multiple files
+      const files = [];
+      for (const filePath of result.filePaths) {
+        const content = fs.readFileSync(filePath, 'utf8');
+        files.push({ filePath, content });
+      }
+      return { files, multiple: files.length > 1 };
     } catch (err) {
       console.error('Error reading file:', err);
       return { error: 'Failed to read file' };
@@ -355,4 +418,14 @@ ipcMain.handle('export-html', async (event, htmlContent, fileName) => {
     }
   }
   return { canceled: true };
+});
+
+// Handle window settings
+ipcMain.handle('load-window-settings', async () => {
+  return loadWindowSettings();
+});
+
+ipcMain.handle('save-window-settings', async () => {
+  saveWindowSettings();
+  return { success: true };
 });

@@ -266,6 +266,80 @@ function loadThemePreference() {
   }
 }
 
+// Settings management
+function loadUserSettings() {
+  try {
+    // Load view mode preference
+    const savedViewMode = localStorage.getItem('mdreader-viewmode');
+    if (savedViewMode && ['split', 'editor', 'preview'].includes(savedViewMode)) {
+      viewMode = savedViewMode;
+      applyViewMode();
+    }
+    
+    // Load window position and size (handled by main process)
+    ipcRenderer.invoke('load-window-settings');
+    
+  } catch (error) {
+    console.error('Error loading user settings:', error);
+  }
+}
+
+function applyViewMode() {
+  try {
+    const editorPanel = document.getElementById('editor-panel');
+    const previewPanel = document.getElementById('preview-panel');
+    const resizer = document.getElementById('resizer');
+    const viewModeIcon = document.getElementById('view-mode-icon');
+    const viewModeText = document.getElementById('view-mode-text');
+    
+    if (!editorPanel || !previewPanel || !resizer) {
+      return; // Elements not ready yet
+    }
+    
+    if (viewMode === 'editor') {
+      editorPanel.style.width = '100%';
+      previewPanel.style.display = 'none';
+      resizer.style.display = 'none';
+      if (viewModeIcon) viewModeIcon.className = 'fas fa-code';
+      if (viewModeText) viewModeText.textContent = 'Editor';
+    } else if (viewMode === 'preview') {
+      editorPanel.style.display = 'none';
+      previewPanel.style.width = '100%';
+      previewPanel.style.display = 'block';
+      resizer.style.display = 'none';
+      if (viewModeIcon) viewModeIcon.className = 'fas fa-eye';
+      if (viewModeText) viewModeText.textContent = 'Preview';
+    } else {
+      // Default to split mode
+      editorPanel.style.display = 'block';
+      editorPanel.style.width = '50%';
+      previewPanel.style.display = 'block';
+      previewPanel.style.width = '50%';
+      resizer.style.display = 'block';
+      if (viewModeIcon) viewModeIcon.className = 'fas fa-columns';
+      if (viewModeText) viewModeText.textContent = 'Split';
+    }
+    
+    // Trigger editor layout update
+    if (editor && viewMode !== 'preview') {
+      setTimeout(() => {
+        editor.layout();
+      }, 100);
+    }
+  } catch (error) {
+    console.error('Error applying view mode:', error);
+  }
+}
+
+function saveWindowSettings() {
+  try {
+    // Save window position and size (handled by main process)
+    ipcRenderer.invoke('save-window-settings');
+  } catch (error) {
+    console.error('Error saving window settings:', error);
+  }
+}
+
 // Add global error handlers for debugging
 window.addEventListener('error', function(e) {
   console.error('Global error caught:', e.error);
@@ -283,6 +357,9 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Load theme preference
   loadThemePreference();
+  
+  // Load user settings
+  loadUserSettings();
   
   // Initialize window controls
   initializeWindowControls();
@@ -365,10 +442,32 @@ function initializeTabSystem() {
 }
 
 // Create a new tab
-function createNewTab(filePath = null, content = null) {
+function createNewTab(filePath = null, content = null, displayName = null) {
   try {
     const tabId = `tab-${tabCounter++}`;
-    const fileName = filePath ? filePath.split('\\').pop() : 'Untitled';
+    let fileName;
+    
+    if (displayName) {
+      // Use provided display name (for drag-and-drop files)
+      fileName = displayName;
+    } else if (filePath) {
+      const fullFileName = filePath.split('\\').pop();
+      // Check if this is a temporary file created for drag-and-drop
+      if (fullFileName.startsWith('mdreader_') && fullFileName.includes('_')) {
+        // Extract original filename from temporary file name
+        // Format: mdreader_timestamp_originalname.ext
+        const parts = fullFileName.split('_');
+        if (parts.length >= 3) {
+          fileName = parts.slice(2).join('_'); // Join back in case original name had underscores
+        } else {
+          fileName = fullFileName;
+        }
+      } else {
+        fileName = fullFileName;
+      }
+    } else {
+      fileName = 'Untitled';
+    }
     
     // Create tab data
     const tabData = {
@@ -973,43 +1072,42 @@ async function openFile() {
     
     const result = await ipcRenderer.invoke('open-file-dialog');
     if (!result.canceled && !result.error) {
-      if (editor) {
-        isApplyingEditorContent = true;
-        try {
-          editor.setValue(result.content);
-        } finally {
-          isApplyingEditorContent = false;
+      if (result.multiple && result.files) {
+        // Handle multiple files - create a new tab for each
+        for (const file of result.files) {
+          createNewTab(file.filePath, file.content);
+          addToRecentFiles(file.filePath);
         }
-      }
-      
-      // Update active tab data
-      if (activeTabId) {
-        const activeTab = tabs.find(tab => tab.id === activeTabId);
-        if (activeTab) {
-          activeTab.filePath = result.filePath;
-          activeTab.fileName = result.filePath ? result.filePath.split('\\').pop() : 'Untitled';
-          activeTab.content = result.content;
-          activeTab.isModified = false;
-          
-          const tabElement = document.querySelector(`.tab[data-tab-id="${activeTabId}"] .tab-title`);
-          if (tabElement) {
-            tabElement.textContent = activeTab.fileName;
+        // Switch to the first opened file
+        if (result.files.length > 0) {
+          const firstFile = result.files[0];
+          const newTab = tabs[tabs.length - result.files.length];
+          if (newTab) {
+            switchToTab(newTab.id);
           }
         }
+      } else if (result.files && result.files.length > 0) {
+        // Handle single file - create a new tab instead of overwriting current tab
+        const file = result.files[0];
+        createNewTab(file.filePath, file.content);
+        addToRecentFiles(file.filePath);
+        
+        // Switch to the newly created tab
+        const newTab = tabs[tabs.length - 1];
+        if (newTab) {
+          switchToTab(newTab.id);
+        }
+      } else {
+        // Handle legacy single file format - create a new tab
+        createNewTab(result.filePath, result.content);
+        addToRecentFiles(result.filePath);
+        
+        // Switch to the newly created tab
+        const newTab = tabs[tabs.length - 1];
+        if (newTab) {
+          switchToTab(newTab.id);
+        }
       }
-      
-      currentFilePath = result.filePath;
-      currentFileName = result.filePath ? result.filePath.split('\\').pop() : 'Untitled';
-      isModified = false;
-      
-      addToRecentFiles(result.filePath);
-      
-      // Refresh UI and preview explicitly because programmatic changes do not trigger content listener
-      updateActiveTabContent();
-      updateWordCount();
-      updateStatusBar();
-      updatePreview();
-      updateWindowTitle();
     }
   } catch (error) {
     console.error('Error opening file:', error);
@@ -1017,7 +1115,7 @@ async function openFile() {
   }
 }
 
-async function openFilePath(filePath) {
+async function openFilePath(filePath, originalFileName = null) {
   try {
     console.log('openFilePath called with:', filePath);
     // Normalize the file path
@@ -1045,7 +1143,9 @@ async function openFilePath(filePath) {
         await new Promise(resolve => setTimeout(resolve, 300));
       }
       
-      createNewTab(normalizedPath, result.content);
+      // Use original filename if provided (for drag-and-drop), otherwise extract from path
+      const displayName = originalFileName || path.basename(normalizedPath);
+      createNewTab(normalizedPath, result.content, displayName);
       // Add to recent files
       addToRecentFiles(normalizedPath);
     } else {
@@ -1167,6 +1267,10 @@ function toggleTheme() {
       // Notify main process to update system title bar
       ipcRenderer.invoke('set-theme', 'light');
     }
+    
+    // Save theme preference
+    localStorage.setItem('mdreader-theme', isDarkTheme ? 'dark' : 'light');
+    
     updatePreview();
     updateStatusBar();
   } catch (error) {
@@ -1222,6 +1326,9 @@ function toggleViewMode() {
         editor.layout();
       }, 100);
     }
+    
+    // Save view mode preference
+    localStorage.setItem('mdreader-viewmode', viewMode);
     
     updateStatusBar();
   } catch (error) {
@@ -1321,6 +1428,9 @@ window.addEventListener('beforeunload', (e) => {
   
   // Stop autosave timer
   stopAutoSave();
+  
+  // Save window settings
+  saveWindowSettings();
   
   // Don't block the close - let it happen
   // Users can manually save if they want via Ctrl+S
@@ -1472,7 +1582,8 @@ function initializeDragDrop() {
         }
 
         console.log('Opening file:', filePath);
-        await openFilePath(filePath);
+        // Pass the original file name to preserve it in the tab
+        await openFilePath(filePath, file.name);
       } catch (error) {
         console.error('Error opening dropped file:', error);
         alert('Failed to open file: ' + error.message);
