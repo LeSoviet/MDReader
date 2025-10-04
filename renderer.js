@@ -811,17 +811,38 @@ function initializeEditor() {
         if (selection && !selection.isEmpty()) {
           const selectedText = editor.getModel().getValueInRange(selection);
           try {
-            await navigator.clipboard.writeText(selectedText);
+            // Ensure document is focused before clipboard operation
+            if (document.hasFocus()) {
+              await navigator.clipboard.writeText(selectedText);
+            } else {
+              // Focus the editor first, then try clipboard
+              editor.focus();
+              await new Promise(resolve => setTimeout(resolve, 100));
+              await navigator.clipboard.writeText(selectedText);
+            }
           } catch (err) {
             console.error('Failed to copy text: ', err);
             // Fallback to Monaco's built-in copy
-            editor.getAction('editor.action.clipboardCopyAction').run();
+            try {
+              const copyAction = editor.getAction('editor.action.clipboardCopyAction');
+              if (copyAction) {
+                copyAction.run();
+              }
+            } catch (fallbackErr) {
+              console.error('Fallback copy also failed:', fallbackErr);
+            }
           }
         }
       });
 
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, async function() {
         try {
+          // Ensure document is focused before clipboard operation
+          if (!document.hasFocus()) {
+            editor.focus();
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          
           const text = await navigator.clipboard.readText();
           const selection = editor.getSelection();
           const range = new monaco.Range(
@@ -835,7 +856,14 @@ function initializeEditor() {
         } catch (err) {
           console.error('Failed to paste text: ', err);
           // Fallback to Monaco's built-in paste
-          editor.getAction('editor.action.clipboardPasteAction').run();
+          try {
+            const pasteAction = editor.getAction('editor.action.clipboardPasteAction');
+            if (pasteAction) {
+              pasteAction.run();
+            }
+          } catch (fallbackErr) {
+            console.error('Fallback paste also failed:', fallbackErr);
+          }
         }
       });
 
@@ -844,6 +872,12 @@ function initializeEditor() {
         if (selection && !selection.isEmpty()) {
           const selectedText = editor.getModel().getValueInRange(selection);
           try {
+            // Ensure document is focused before clipboard operation
+            if (!document.hasFocus()) {
+              editor.focus();
+              await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
             await navigator.clipboard.writeText(selectedText);
             const range = new monaco.Range(
               selection.startLineNumber,
@@ -856,7 +890,14 @@ function initializeEditor() {
           } catch (err) {
             console.error('Failed to cut text: ', err);
             // Fallback to Monaco's built-in cut
-            editor.getAction('editor.action.clipboardCutAction').run();
+            try {
+              const cutAction = editor.getAction('editor.action.clipboardCutAction');
+              if (cutAction) {
+                cutAction.run();
+              }
+            } catch (fallbackErr) {
+              console.error('Fallback cut also failed:', fallbackErr);
+            }
           }
         }
       });
