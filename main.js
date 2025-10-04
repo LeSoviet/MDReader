@@ -104,6 +104,13 @@ const createWindow = function() {
   // and load the index.html of the app.
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
+  // Enable F12 for DevTools
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'F12') {
+      mainWindow.webContents.toggleDevTools();
+    }
+  });
+
   // Create the application menu
   createMenu();
 };
