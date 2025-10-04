@@ -1,6 +1,8 @@
-<img width="1202" height="804" alt="image" src="https://github.com/user-attachments/assets/534602d0-8a1f-4985-9e71-cdaa6fdac6c0" />
-<img width="1200" height="796" alt="image" src="https://github.com/user-attachments/assets/44c5fee6-78c2-4792-82c2-da661e3430aa" />
-<img width="1200" height="798" alt="image" src="https://github.com/user-attachments/assets/dabd3865-1ec3-4b3e-9b99-4cce7ed71858" />
+<img width="1920" height="1040" alt="image" src="https://github.com/user-attachments/assets/21c162e4-dd36-42fc-88ee-ecba3b901708" />
+
+<img width="1920" height="1040" alt="image" src="https://github.com/user-attachments/assets/8becd128-9e5d-411d-9edf-84d3301263d2" />
+
+<img width="352" height="118" alt="image" src="https://github.com/user-attachments/assets/c036407b-98ae-4933-8616-9d83a582b813" />
 
 
 # MD Reader
